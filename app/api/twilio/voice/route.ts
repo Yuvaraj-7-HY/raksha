@@ -114,6 +114,9 @@ export async function POST(req: Request) {
       method: "POST",
       speechTimeout: "auto",
       language: "en-IN",
+      enhanced: true,
+      hints: "yes,no,okay,good,bad,fine,pain,hurt,medicine,tablet,morning,evening,took,taken,did not,didn't",
+      speechModel: "experimental_conversations",
     });
     gather.say(reply);
     vr.redirect({ method: "POST" }, `${PUBLIC_BASE_URL}/api/twilio/noinput?callId=${callId}`);

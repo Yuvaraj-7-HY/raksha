@@ -29,6 +29,27 @@ export type TimelineInsert = {
   transcript_json: string;
 };
 
+export type CallAttemptInsert = {
+  patient_id: string;
+  attempt_number: number;
+  call_type: string;
+  outcome: string;
+  call_sid: string | null;
+  duration_seconds: number | null;
+  transcript_json: string | null;
+  concern_level: number | null;
+  emergency: boolean | null;
+};
+
+export type EscalationInsert = {
+  patient_id: string;
+  call_id: string;
+  reason: string;
+  level: number;
+  acknowledged: boolean;
+  acknowledged_at: string | null;
+};
+
 export async function upsertTimeline(row: TimelineInsert) {
   const { error } = await supabase
     .from("timeline")
@@ -39,4 +60,39 @@ export async function upsertTimeline(row: TimelineInsert) {
     return false;
   }
   return true;
+}
+
+export async function insertCallAttempt(row: CallAttemptInsert) {
+  const { error } = await supabase
+    .from("call_attempts")
+    .insert(row);
+
+  if (error) {
+    console.error("[supabase] insertCallAttempt error:", error);
+    return false;
+  }
+  return true;
+}
+
+export async function insertEscalation(row: EscalationInsert) {
+  const { error } = await supabase
+    .from("escalations")
+    .insert(row);
+
+  if (error) {
+    console.error("[supabase] insertEscalation error:", error);
+    return false;
+  }
+  return true;
+}
+
+export async function getPatientIdByPhone(phone: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("patients")
+    .select("id")
+    .eq("phone", phone)
+    .single();
+
+  if (error || !data) return null;
+  return data.id;
 }

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 import { twilioClient, TWILIO_FROM_NUMBER, validateTwilioSignature } from "@/lib/twilio";
 import { getCall, markFinalized, setCallEnded, setResult, parseHistory } from "@/lib/calls-db";
-import { upsertTimeline, type TimelineInsert } from "@/lib/supabase";
+import { upsertTimeline, type TimelineInsert, insertCallAttempt, insertEscalation, getPatientIdByPhone, type CallAttemptInsert, type EscalationInsert } from "@/lib/supabase";
 import { PUBLIC_BASE_URL, TWILIO_AUTH_TOKEN, TWILIO_VALIDATE, N8N_BASE_URL, N8N_WEBHOOK_PREFIX, CARE_SHARED_SECRET } from "@/lib/config";
 
 const TERMINAL_STATUSES = ["completed", "busy", "failed", "no-answer", "canceled"];
@@ -128,6 +128,15 @@ async function callN8nW3(callId: string, callType: string, attempt: number, reas
   }
 }
 
+function getCallDuration(call: any): number | null {
+  if (call.created_at && call.ended_at) {
+    const start = new Date(call.created_at).getTime();
+    const end = new Date(call.ended_at).getTime();
+    return Math.round((end - start) / 1000);
+  }
+  return null;
+}
+
 export async function POST(req: Request) {
   // Validate Twilio signature
   const signature = req.headers.get("x-twilio-signature");
@@ -182,7 +191,42 @@ export async function POST(req: Request) {
       }
       setResult(callId, result);
 
-      // Sync to Supabase (non-blocking)
+      // Get patient_id from Supabase
+      const patientId = await getPatientIdByPhone(call.to_number);
+      
+      if (patientId) {
+        // Insert into call_attempts
+        const attemptRow: CallAttemptInsert = {
+          patient_id: patientId,
+          attempt_number: call.attempt,
+          call_type: call.call_type,
+          outcome: callStatus,
+          call_sid: call.twilio_call_sid,
+          duration_seconds: getCallDuration(call),
+          transcript_json: JSON.stringify(transcript),
+          concern_level: result && typeof result === "object" && "concern_level" in result ? (result as any).concern_level : null,
+          emergency: result && typeof result === "object" && "emergency" in result ? (result as any).emergency : null,
+        };
+        insertCallAttempt(attemptRow).catch(e => console.error("[twilio/status] call_attempts insert failed:", e));
+
+        // If emergency or high concern, create escalation
+        const concernLevel = result && typeof result === "object" && "concern_level" in result ? (result as any).concern_level : 1;
+        const emergency = result && typeof result === "object" && "emergency" in result ? (result as any).emergency : false;
+        
+        if (emergency || concernLevel >= 3) {
+          const escalationRow: EscalationInsert = {
+            patient_id: patientId,
+            call_id: callId,
+            reason: emergency ? "Emergency keyword detected" : `High concern level: ${concernLevel}`,
+            level: emergency ? 3 : concernLevel,
+            acknowledged: false,
+            acknowledged_at: null,
+          };
+          insertEscalation(escalationRow).catch(e => console.error("[twilio/status] escalations insert failed:", e));
+        }
+      }
+
+      // Sync timeline to Supabase (non-blocking)
       upsertTimeline(timelineRow).catch(e => console.error("[twilio/status] Supabase sync failed:", e));
     }
   }
