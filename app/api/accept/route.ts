@@ -1,4 +1,5 @@
-import { acceptCall } from "@/lib/ringState";
+import { acceptCall, readRingState } from "@/lib/ringState";
+import { broadcastRingState } from "@/lib/supabaseBroadcast";
 
 export async function POST(req: Request) {
   let body: { callId?: string };
@@ -18,5 +19,6 @@ export async function POST(req: Request) {
     return Response.json({ error: "no matching ring" }, { status: 409 });
   }
 
+  void broadcastRingState(readRingState());
   return Response.json({ ok: true }, { status: 200 });
 }

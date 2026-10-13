@@ -58,6 +58,16 @@ export const STALE_RING_SECONDS = Number(
   process.env.STALE_RING_SECONDS ?? 60
 );
 
+// ── Twilio ────────────────────────────────────────────────────────────────────
+export const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID ?? "";
+export const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN ?? "";
+export const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER ?? "";
+export const TWILIO_MESSAGING_SERVICE_SID =
+  process.env.TWILIO_MESSAGING_SERVICE_SID ?? "";
+/** Base URL for Twilio voice webhooks. Set to your ngrok/prod URL. */
+export const TWILIO_WEBHOOK_BASE_URL =
+  process.env.TWILIO_WEBHOOK_BASE_URL ?? "";
+
 // ── Database ──────────────────────────────────────────────────────────────────
 export const DB_PATH = path.join(process.cwd(), "data", "raksha.db");
 

@@ -1,5 +1,6 @@
 import { callN8nWebhook } from "@/lib/n8n";
 import { endCall, readRingState } from "@/lib/ringState";
+import { broadcastRingState } from "@/lib/supabaseBroadcast";
 
 type TranscriptEntry = { role: string; text: string; ts?: number };
 
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
   const transcript = Array.isArray(body.transcript) ? body.transcript : [];
 
   endCall(callId ?? undefined);
+  void broadcastRingState(readRingState());
 
   // Ship the full conversation to n8n (W2 completed / W3 missed|declined).
   const n8nPath =

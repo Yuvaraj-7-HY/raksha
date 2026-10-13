@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { tryStartRing } from "@/lib/ringState";
+import { broadcastRingState } from "@/lib/supabaseBroadcast";
 
 /**
  * Dev-only ring trigger for the laptop dashboard.
@@ -31,5 +32,6 @@ export async function POST(req: Request) {
     return Response.json({ error: "phone busy" }, { status: 409 });
   }
 
+  void broadcastRingState(result.state);
   return Response.json({ ok: true, state: result.state }, { status: 200 });
 }
