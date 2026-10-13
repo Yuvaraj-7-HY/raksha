@@ -1,33 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ReferenceLine,
-} from "recharts";
 import {
   getPatientById,
   updatePatient,
   getMedsByPatient,
   deleteMedication,
   deletePatient,
-  getVitalsByPatient,
-  getLatestVital,
-  getVitalsHistory,
-  addVitalReading,
-  deleteVitalReading,
-  getBloodSugarStatus,
-  getBloodPressureStatus,
+  getCommunications,
 } from "@/lib/storage";
-import type { Patient, Medication, VitalReading } from "@/types";
+import type { Patient, Medication, CommunicationLog } from "@/types";
+import {
+  SendSmsModal,
+  CallCaregiverModal,
+  CallPatientMedCheckModal,
+  LastSmsNote,
+} from "../components/CommunicationModals";
 
 function MedCard({ med, onDelete, delay }: { med: Medication; onDelete: () => void; delay: number }) {
   const [hov, setHov] = useState(false);
@@ -99,25 +89,14 @@ export default function PatientDetailPage() {
 
   const [patient, setPatient] = useState<Patient | null | undefined>(undefined);
   const [meds, setMeds] = useState<Medication[]>([]);
-  const [vitals, setVitals] = useState<VitalReading[]>([]);
   const [toast, setToast] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
 
   // Modals state
-  const [showSugarModal, setShowSugarModal] = useState(false);
-  const [showBPModal, setShowBPModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-
-  // Blood sugar modal fields
-  const [sugarVal, setSugarVal] = useState("");
-  const [sugarDate, setSugarDate] = useState("");
-  const [sugarNotes, setSugarNotes] = useState("");
-
-  // Blood pressure modal fields
-  const [bpSys, setBpSys] = useState("");
-  const [bpDia, setBpDia] = useState("");
-  const [bpDate, setBpDate] = useState("");
-  const [bpNotes, setBpNotes] = useState("");
+  const [showSmsModal, setShowSmsModal] = useState(false);
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [showMedCheckModal, setShowMedCheckModal] = useState(false);
+  const [commLogs, setCommLogs] = useState<CommunicationLog[]>([]);
 
   // Edit patient fields
   const [editName, setEditName] = useState("");
@@ -125,22 +104,115 @@ export default function PatientDetailPage() {
   const [editPhone, setEditPhone] = useState("");
   const [editDiabetes, setEditDiabetes] = useState(false);
   const [editHypertension, setEditHypertension] = useState(false);
+  const [editIsDeaf, setEditIsDeaf] = useState(false);
+
+  // Medication check call status state
+  const [latestMedCheck, setLatestMedCheck] = useState<any>(null);
+  const [isCallingMedCheck, setIsCallingMedCheck] = useState(false);
+  const [isPollingMedCheck, setIsPollingMedCheck] = useState(false);
+
+  const fetchLatestMedCheck = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/call-patient/responses?patientId=${encodeURIComponent(id)}`);
+      const data = await res.json();
+      if (data.success && data.latest) {
+        setLatestMedCheck(data.latest);
+        return data.latest;
+      }
+    } catch (e) {
+      console.warn("Failed to fetch med check:", e);
+    }
+    return null;
+  }, [id]);
+
+  const handleSimulateReply = async (replyDigit: "1" | "2" | "3" | "4") => {
+    if (!patient) return;
+    try {
+      const res = await fetch("/api/call-patient/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patientId: patient.id,
+          checkId: latestMedCheck?.id,
+          reply: replyDigit,
+          source: "manual_simulation",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const labels: Record<string, string> = {
+          "1": "1 (Taken) recorded & sent to Telegram bot!",
+          "2": "2 (Not Taken) recorded & sent to Telegram bot!",
+          "3": "3 (Skipped) recorded & sent to Telegram bot!",
+          "4": "4 (Rescheduled) recorded & sent to Telegram bot!",
+        };
+        setToast(`Simulated: ${labels[replyDigit] || replyDigit}`);
+        await fetchLatestMedCheck();
+      }
+    } catch (e: any) {
+      alert("Simulation failed: " + e.message);
+    }
+  };
+
+  const handleCallPatientMedCheck = async () => {
+    if (!patient) return;
+    setIsCallingMedCheck(true);
+    try {
+      const res = await fetch("/api/call-patient", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patientId: patient.id,
+          patientName: patient.name,
+          phone: patient.phone,
+          isDeaf: Boolean(patient.isDeaf),
+          telegramChatId: patient.telegramChatId,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToast(
+          patient.isDeaf
+            ? `Medication check reminder sent to ${patient.name} via SMS & Telegram!`
+            : `Calling ${patient.name}... Keypad check initiated!`
+        );
+        if (data.record) setLatestMedCheck(data.record);
+        setIsPollingMedCheck(true);
+        let count = 0;
+        const interval = setInterval(async () => {
+          count++;
+          const rec = await fetchLatestMedCheck();
+          if (rec && (rec.status === "completed" || rec.status === "no_response" || count > 10)) {
+            clearInterval(interval);
+            setIsPollingMedCheck(false);
+          }
+        }, 3000);
+      } else {
+        alert(data.error || "Failed to initiate call");
+      }
+    } catch (err: any) {
+      alert(err?.message || "Failed to initiate call");
+    } finally {
+      setIsCallingMedCheck(false);
+    }
+  };
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    fetchLatestMedCheck();
+  }, [fetchLatestMedCheck]);
 
   const loadData = useCallback(() => {
     const p = getPatientById(id);
     setPatient(p ?? null);
     if (p) {
       setMeds(getMedsByPatient(id));
-      setVitals(getVitalsByPatient(id));
+      setCommLogs(getCommunications(id));
       setEditName(p.name);
       setEditAge(p.age !== null && p.age !== undefined ? String(p.age) : "");
       setEditPhone(p.phone || "");
       setEditDiabetes(Boolean(p.hasDiabetes));
       setEditHypertension(Boolean(p.hasHypertension));
+      setEditIsDeaf(Boolean(p.isDeaf));
     }
   }, [id]);
 
@@ -154,53 +226,6 @@ export default function PatientDetailPage() {
     }
   }, [loadData]);
 
-  function toLocalDatetimeString(d = new Date()) {
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const year = d.getFullYear();
-    const month = pad(d.getMonth() + 1);
-    const day = pad(d.getDate());
-    const hours = pad(d.getHours());
-    const minutes = pad(d.getMinutes());
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
-
-  // Vitals metrics (strictly reactive from vitals state)
-  const latestSugar = useMemo(() => {
-    return vitals.find(v => v.type === "blood_sugar");
-  }, [vitals]);
-
-  const latestBP = useMemo(() => {
-    return vitals.find(v => v.type === "blood_pressure");
-  }, [vitals]);
-
-  // 14-day history for charts
-  const sugarChartData = useMemo(() => {
-    const threshold = Date.now() - 14 * 86400000;
-    return vitals
-      .filter(v => v.type === "blood_sugar" && new Date(v.measuredAt).getTime() >= threshold)
-      .sort((a, b) => new Date(a.measuredAt).getTime() - new Date(b.measuredAt).getTime())
-      .map(item => ({
-        date: new Date(item.measuredAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
-        timestamp: new Date(item.measuredAt).getTime(),
-        sugar: item.value,
-        notes: item.notes,
-      }));
-  }, [vitals]);
-
-  const bpChartData = useMemo(() => {
-    const threshold = Date.now() - 14 * 86400000;
-    return vitals
-      .filter(v => v.type === "blood_pressure" && new Date(v.measuredAt).getTime() >= threshold)
-      .sort((a, b) => new Date(a.measuredAt).getTime() - new Date(b.measuredAt).getTime())
-      .map(item => ({
-        date: new Date(item.measuredAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
-        timestamp: new Date(item.measuredAt).getTime(),
-        systolic: item.systolic,
-        diastolic: item.diastolic,
-        notes: item.notes,
-      }));
-  }, [vitals]);
-
   function handleDeleteMed(medId: string, medName: string) {
     if (!confirm(`Delete medication "${medName}"?`)) return;
     deleteMedication(medId);
@@ -211,72 +236,10 @@ export default function PatientDetailPage() {
 
   function handleDeletePatient() {
     if (!patient) return;
-    if (!confirm(`Delete patient "${patient.name}" and all their medications and vitals?`)) return;
+    if (!confirm(`Delete patient "${patient.name}" and all their medications?`)) return;
     deletePatient(id);
     sessionStorage.setItem("raksha_toast", `${patient.name} deleted.`);
     router.push("/patients");
-  }
-
-  function handleDeleteVital(vitalId: string) {
-    if (!confirm("Delete this vital reading?")) return;
-    deleteVitalReading(vitalId);
-    setVitals(getVitalsByPatient(id));
-    setToast("Reading deleted.");
-    setTimeout(() => setToast(null), 3000);
-  }
-
-  // Open modals
-  function openSugarModal() {
-    setSugarVal("");
-    setSugarDate(toLocalDatetimeString());
-    setSugarNotes("");
-    setShowSugarModal(true);
-  }
-
-  function openBPModal() {
-    setBpSys("");
-    setBpDia("");
-    setBpDate(toLocalDatetimeString());
-    setBpNotes("");
-    setShowBPModal(true);
-  }
-
-  function handleSaveSugar(e: React.FormEvent) {
-    e.preventDefault();
-    const val = Number(sugarVal);
-    if (!val || val <= 0) return;
-    const measuredAt = sugarDate ? new Date(sugarDate).toISOString() : new Date().toISOString();
-    addVitalReading({
-      patientId: id,
-      type: "blood_sugar",
-      value: val,
-      measuredAt,
-      notes: sugarNotes.trim() || undefined,
-    });
-    setShowSugarModal(false);
-    setVitals(getVitalsByPatient(id));
-    setToast(`Blood sugar reading (${val} mg/dL) saved!`);
-    setTimeout(() => setToast(null), 3000);
-  }
-
-  function handleSaveBP(e: React.FormEvent) {
-    e.preventDefault();
-    const sys = Number(bpSys);
-    const dia = Number(bpDia);
-    if (!sys || !dia || sys <= 0 || dia <= 0) return;
-    const measuredAt = bpDate ? new Date(bpDate).toISOString() : new Date().toISOString();
-    addVitalReading({
-      patientId: id,
-      type: "blood_pressure",
-      systolic: sys,
-      diastolic: dia,
-      measuredAt,
-      notes: bpNotes.trim() || undefined,
-    });
-    setShowBPModal(false);
-    setVitals(getVitalsByPatient(id));
-    setToast(`Blood pressure reading (${sys}/${dia} mmHg) saved!`);
-    setTimeout(() => setToast(null), 3000);
   }
 
   function handleSaveEdit(e: React.FormEvent) {
@@ -288,6 +251,7 @@ export default function PatientDetailPage() {
       phone: editPhone.trim(),
       hasDiabetes: editDiabetes,
       hasHypertension: editHypertension,
+      isDeaf: editIsDeaf,
     });
     if (updated) {
       setPatient(updated);
@@ -319,9 +283,6 @@ export default function PatientDetailPage() {
 
   const initials = patient.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
-  const sugarStatus = getBloodSugarStatus(latestSugar?.value);
-  const bpStatus = getBloodPressureStatus(latestBP?.systolic, latestBP?.diastolic);
-
   const modalOverlayStyle: React.CSSProperties = {
     position: "fixed", inset: 0, background: "rgba(17,24,39,0.55)", backdropFilter: "blur(3px)",
     zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
@@ -346,6 +307,7 @@ export default function PatientDetailPage() {
         * { box-sizing:border-box; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         .fade-up { animation:fadeUp 0.35s ease-out both; }
         input:focus, textarea:focus, select:focus { border-color:#0D9488 !important; box-shadow:0 0 0 3px rgba(13,148,136,0.1); }
       `}</style>
@@ -402,7 +364,7 @@ export default function PatientDetailPage() {
                     padding: "3px 9px", borderRadius: 6, background: "#EFF6FF",
                     color: "#2563EB", fontSize: 11, fontWeight: 700, border: "1px solid #DBEAFE",
                   }}>
-                    🩺 Diabetes Tracked
+                    🩺 Diabetes
                   </span>
                 )}
                 {patient.hasHypertension && (
@@ -410,7 +372,15 @@ export default function PatientDetailPage() {
                     padding: "3px 9px", borderRadius: 6, background: "#FEF2F2",
                     color: "#DC2626", fontSize: 11, fontWeight: 700, border: "1px solid #FEE2E2",
                   }}>
-                    💓 Hypertension Tracked
+                    💓 Hypertension
+                  </span>
+                )}
+                {patient.isDeaf && (
+                  <span style={{
+                    padding: "3px 9px", borderRadius: 6, background: "#EEF2FF",
+                    color: "#4F46E5", fontSize: 11, fontWeight: 700, border: "1px solid #C7D2FE",
+                  }}>
+                    🧏 Deaf (SMS &amp; Telegram)
                   </span>
                 )}
               </div>
@@ -434,7 +404,42 @@ export default function PatientDetailPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              onClick={() => setShowSmsModal(true)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 15px",
+                borderRadius: 10, background: "#00C896", color: "#fff", border: "none",
+                fontSize: 13, fontWeight: 700, cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(0,200,150,0.25)",
+              }}
+            >
+              💬 Send SMS
+            </button>
+            <button
+              onClick={() => setShowCallModal(true)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 15px",
+                borderRadius: 10, background: "#0F172A", color: "#fff", border: "none",
+                fontSize: 13, fontWeight: 700, cursor: "pointer",
+              }}
+            >
+              📞 Call Caregiver
+            </button>
+            <button
+              onClick={() => setShowMedCheckModal(true)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 15px",
+                borderRadius: 10,
+                background: patient.isDeaf ? "#4F46E5" : "#2563EB",
+                color: "#fff", border: "none",
+                fontSize: 13, fontWeight: 700, cursor: "pointer",
+                boxShadow: patient.isDeaf ? "0 2px 8px rgba(79,70,229,0.25)" : "0 2px 8px rgba(37,99,235,0.25)",
+              }}
+              title={patient.isDeaf ? "Send interactive reminder message via SMS & Telegram (Reply 1 = Taken, 2 = Not Taken)" : "Place interactive voice call to patient (Press 1 = Taken, Press 2 = Not Taken)"}
+            >
+              {patient.isDeaf ? "📱 Med Check Message" : "📞 Med Check Call"}
+            </button>
             <Link
               href={"/patients/add-medication?patientId=" + patient.id}
               style={{
@@ -469,361 +474,322 @@ export default function PatientDetailPage() {
 
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "28px 24px 64px" }}>
         {/* Quick Stat Tiles */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }} className="fade-up">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 24 }} className="fade-up">
           <div style={{
             padding: "14px 18px", borderRadius: 12, background: "#fff",
             border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
           }}>
             <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>Prescribed Medications</p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#111827" }}>{meds.length}</p>
-          </div>
-          <div style={{
-            padding: "14px 18px", borderRadius: 12, background: "#fff",
-            border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-          }}>
-            <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>Vitals Logged</p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0D9488" }}>{vitals.length}</p>
+            <p style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#111827" }}>{meds.length}</p>
           </div>
           <div style={{
             padding: "14px 18px", borderRadius: 12, background: "#fff",
             border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
           }}>
             <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>Patient Since</p>
-            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#2563EB" }}>
+            <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#2563EB" }}>
               {new Date(patient.createdAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
             </p>
           </div>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════════════
-            VITALS TRACKING SECTION
+            MEDICATION CHECK CALL STATUS SECTION
         ══════════════════════════════════════════════════════════════════════════ */}
         <section style={{ marginBottom: 36 }} className="fade-up">
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            marginBottom: 16, flexWrap: "wrap", gap: 12,
+            marginBottom: 14, flexWrap: "wrap", gap: 12,
           }}>
             <div>
-              <h2 style={{ margin: "0 0 2px", fontSize: 18, fontWeight: 800, color: "#111827", letterSpacing: "-0.01em" }}>
-                Vitals Tracking
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 18 }}>{patient.isDeaf ? "💬" : "📞"}</span>
+                <h2 style={{ margin: "0 0 2px", fontSize: 18, fontWeight: 800, color: "#111827", letterSpacing: "-0.01em" }}>
+                  {patient.isDeaf ? "Medication Check via Message" : "Interactive Medication Check Call"}
+                </h2>
+                {patient.isDeaf && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    padding: "2px 8px", borderRadius: 999, background: "#EDE9FE", color: "#6D28D9",
+                    fontSize: 11, fontWeight: 700,
+                  }}>
+                    🧏 Deaf Mode
+                  </span>
+                )}
+                {isPollingMedCheck && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    padding: "2px 8px", borderRadius: 999, background: "#FEF3C7", color: "#B45309",
+                    fontSize: 11, fontWeight: 700,
+                  }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#F59E0B", animation: "pulse 1s infinite" }} />
+                    {patient.isDeaf ? "Message Sent..." : "Live Call In Progress..."}
+                  </span>
+                )}
+              </div>
               <p style={{ margin: 0, fontSize: 12, color: "#6B7280" }}>
-                Blood glucose and blood pressure monitoring with normal range classification
+                {patient.isDeaf
+                  ? "Sends SMS + Telegram message asking if medicine was taken — Reply 1 (Taken) / 2 (Not Taken)"
+                  : "Twilio IVR automated phone call asks elderly patient if medicine was taken: Press 1 (Yes) / Press 2 (No)"}
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={openSugarModal}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
-                  borderRadius: 9, background: "#0D9488", color: "#fff", border: "none",
-                  fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 6px rgba(13,148,136,0.2)",
-                }}
-              >
-                + Add Blood Sugar
-              </button>
-              <button
-                onClick={openBPModal}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
-                  borderRadius: 9, background: "#1E293B", color: "#fff", border: "none",
-                  fontSize: 12, fontWeight: 700, cursor: "pointer",
-                }}
-              >
-                + Add Blood Pressure
-              </button>
-            </div>
+            <button
+              onClick={handleCallPatientMedCheck}
+              disabled={isCallingMedCheck}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 16px",
+                borderRadius: 10,
+                background: isCallingMedCheck ? "#94A3B8" : patient.isDeaf ? "#7C3AED" : "#2563EB",
+                color: "#fff", border: "none",
+                fontSize: 13, fontWeight: 700, cursor: isCallingMedCheck ? "not-allowed" : "pointer",
+                boxShadow: patient.isDeaf ? "0 2px 8px rgba(124,58,237,0.25)" : "0 2px 8px rgba(37,99,235,0.2)",
+              }}
+            >
+              {isCallingMedCheck
+                ? (patient.isDeaf ? "Sending..." : "Dialing...")
+                : (patient.isDeaf ? "💬 Send Message Now" : "⚡ Call Patient Now")}
+            </button>
           </div>
 
-          {/* Latest Vitals Summary Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginBottom: 20 }}>
-            {/* Blood Sugar Card */}
+          {latestMedCheck ? (
             <div style={{
-              background: "#fff", border: "1.5px solid #E5E7EB", borderRadius: 16,
-              padding: "20px", position: "relative", boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
+              background: "#fff",
+              border: "1.5px solid #E2E8F0",
+              borderRadius: 16,
+              padding: "20px 22px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
             }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: 16 }}>🩸</span>
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Blood Sugar</span>
-                </div>
-                {latestSugar && (
-                  <span style={{
-                    padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700,
-                    background: sugarStatus.bg, color: sugarStatus.color, border: `1px solid ${sugarStatus.border}`,
-                  }}>
-                    {sugarStatus.label}
-                  </span>
-                )}
-              </div>
+              {(() => {
+                const digitsVal = latestMedCheck.digits || latestMedCheck.digits_pressed;
+                const isTaken = latestMedCheck.response === "Taken" || latestMedCheck.response === "taken" || digitsVal === "1";
+                const isNotTaken = latestMedCheck.response === "Not Taken" || latestMedCheck.response === "not_taken" || digitsVal === "2";
+                const isSkipped = latestMedCheck.response === "Skipped" || latestMedCheck.response === "skipped" || digitsVal === "3";
+                const isRescheduled = latestMedCheck.response === "Rescheduled" || latestMedCheck.response === "rescheduled" || digitsVal === "4";
+                const isPending = latestMedCheck.response === "Pending" || latestMedCheck.status === "calling" || latestMedCheck.status === "initiated" || latestMedCheck.status === "in_progress";
+                const isNoResponse = latestMedCheck.status === "no_response" || latestMedCheck.response === "No Response";
 
-              {latestSugar ? (
-                <div>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                    <span style={{ fontSize: 32, fontWeight: 800, color: "#111827", letterSpacing: "-0.03em" }}>
-                      {latestSugar.value}
-                    </span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#6B7280" }}>mg/dL</span>
-                  </div>
-                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9CA3AF" }}>
-                    Measured {new Date(latestSugar.measuredAt).toLocaleString("en-IN", {
-                      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
-                    })}
-                    {latestSugar.notes && ` • ${latestSugar.notes}`}
-                  </p>
-                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6B7280" }}>
-                    Target Range: <strong style={{ color: "#059669" }}>70 – 140 mg/dL</strong>
-                  </p>
-                </div>
-              ) : (
-                <div style={{ padding: "12px 0" }}>
-                  <p style={{ margin: "0 0 8px", fontSize: 13, color: "#9CA3AF", fontStyle: "italic" }}>
-                    No blood sugar readings logged yet
-                  </p>
-                  <button
-                    onClick={openSugarModal}
-                    style={{ fontSize: 12, color: "#0D9488", fontWeight: 700, background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                  >
-                    + Record first reading
-                  </button>
-                </div>
-              )}
-            </div>
+                return (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                          padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800,
+                          background: isTaken
+                            ? "#ECFDF5"
+                            : isNotTaken
+                            ? "#FEF2F2"
+                            : isSkipped
+                            ? "#F1F5F9"
+                            : isRescheduled
+                            ? "#FEF3C7"
+                            : isNoResponse
+                            ? "#FFFBEB"
+                            : "#EFF6FF",
+                          color: isTaken
+                            ? "#059669"
+                            : isNotTaken
+                            ? "#DC2626"
+                            : isSkipped
+                            ? "#475569"
+                            : isRescheduled
+                            ? "#B45309"
+                            : isNoResponse
+                            ? "#D97706"
+                            : "#2563EB",
+                          border: "1px solid currentColor",
+                        }}>
+                          {isTaken && (patient.isDeaf ? "✓ Medicine Taken (SMS/TG Reply 1)" : "✓ Medicine Taken (Pressed 1)")}
+                          {isNotTaken && (patient.isDeaf ? "⚠ Medicine NOT Taken (SMS/TG Reply 2)" : "⚠ Medicine NOT Taken (Pressed 2)")}
+                          {isSkipped && "⏭️ Dose Skipped (Reply 3)"}
+                          {isRescheduled && "⏰ Rescheduled / Snoozed (Reply 4)"}
+                          {isPending && (patient.isDeaf ? "💬 Reminder Sent • Awaiting Response..." : "📞 Outbound Call Placed • Awaiting 1 or 2...")}
+                          {isNoResponse && "⏱ No Answer / Timed Out"}
+                          {!isTaken && !isNotTaken && !isSkipped && !isRescheduled && !isPending && !isNoResponse && (latestMedCheck.response || latestMedCheck.status)}
+                        </span>
 
-            {/* Blood Pressure Card */}
-            <div style={{
-              background: "#fff", border: "1.5px solid #E5E7EB", borderRadius: 16,
-              padding: "20px", position: "relative", boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: 16 }}>💓</span>
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Blood Pressure</span>
-                </div>
-                {latestBP && (
-                  <span style={{
-                    padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700,
-                    background: bpStatus.bg, color: bpStatus.color, border: `1px solid ${bpStatus.border}`,
-                  }}>
-                    {bpStatus.label}
-                  </span>
-                )}
-              </div>
-
-              {latestBP ? (
-                <div>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                    <span style={{ fontSize: 32, fontWeight: 800, color: "#111827", letterSpacing: "-0.03em" }}>
-                      {latestBP.systolic}/{latestBP.diastolic}
-                    </span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#6B7280" }}>mmHg</span>
-                  </div>
-                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9CA3AF" }}>
-                    Measured {new Date(latestBP.measuredAt).toLocaleString("en-IN", {
-                      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
-                    })}
-                    {latestBP.notes && ` • ${latestBP.notes}`}
-                  </p>
-                  <p style={{ margin: "4px 0 0", fontSize: 11, color: "#6B7280" }}>
-                    Normal Threshold: <strong style={{ color: "#059669" }}>&lt; 120 / &lt; 80 mmHg</strong>
-                  </p>
-                </div>
-              ) : (
-                <div style={{ padding: "12px 0" }}>
-                  <p style={{ margin: "0 0 8px", fontSize: 13, color: "#9CA3AF", fontStyle: "italic" }}>
-                    No blood pressure readings logged yet
-                  </p>
-                  <button
-                    onClick={openBPModal}
-                    style={{ fontSize: 12, color: "#0D9488", fontWeight: 700, background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                  >
-                    + Record first reading
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Vitals 14-Day Charts */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: 16, marginBottom: 20 }}>
-            {/* Blood Sugar Chart */}
-            <div style={{
-              background: "#fff", border: "1.5px solid #E5E7EB", borderRadius: 16,
-              padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                <div>
-                  <h3 style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "#111827" }}>
-                    Blood Sugar — Last 14 Days
-                  </h3>
-                  <span style={{ fontSize: 11, color: "#9CA3AF" }}>Target: 70–140 mg/dL</span>
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#0D9488", background: "#CCFBF1", padding: "2px 8px", borderRadius: 6 }}>
-                  mg/dL
-                </span>
-              </div>
-
-              {sugarChartData.length === 0 ? (
-                <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", color: "#9CA3AF", fontSize: 13 }}>
-                  No blood sugar readings in the last 14 days
-                </div>
-              ) : mounted ? (
-                <div style={{ height: 200, width: "100%" }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={sugarChartData} margin={{ top: 10, right: 12, left: -18, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} />
-                      <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{ background: "#111827", borderRadius: 8, border: "none", color: "#fff", fontSize: 12 }}
-                        formatter={(val: unknown) => [`${val} mg/dL`, "Blood Sugar"]}
-                      />
-                      <ReferenceLine y={140} stroke="#EF4444" strokeDasharray="3 3" label={{ value: "Max 140", fill: "#EF4444", fontSize: 9, position: "top" }} />
-                      <ReferenceLine y={70} stroke="#F59E0B" strokeDasharray="3 3" label={{ value: "Min 70", fill: "#F59E0B", fontSize: 9, position: "bottom" }} />
-                      <Line type="monotone" dataKey="sugar" stroke="#0D9488" strokeWidth={2.5} dot={{ r: 3.5, fill: "#0D9488" }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div style={{ height: 200, background: "#F9FAFB", borderRadius: 8 }} />
-              )}
-            </div>
-
-            {/* Blood Pressure Chart */}
-            <div style={{
-              background: "#fff", border: "1.5px solid #E5E7EB", borderRadius: 16,
-              padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                <div>
-                  <h3 style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "#111827" }}>
-                    Blood Pressure — Last 14 Days
-                  </h3>
-                  <div style={{ display: "flex", gap: 10, fontSize: 11, color: "#6B7280" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#E11D48" }} /> Systolic
-                    </span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563EB" }} /> Diastolic
-                    </span>
-                  </div>
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#1E293B", background: "#F1F5F9", padding: "2px 8px", borderRadius: 6 }}>
-                  mmHg
-                </span>
-              </div>
-
-              {bpChartData.length === 0 ? (
-                <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", color: "#9CA3AF", fontSize: 13 }}>
-                  No blood pressure readings in the last 14 days
-                </div>
-              ) : mounted ? (
-                <div style={{ height: 200, width: "100%" }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={bpChartData} margin={{ top: 10, right: 12, left: -18, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} />
-                      <YAxis domain={["auto", "auto"]} tick={{ fontSize: 10, fill: "#9CA3AF" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{ background: "#111827", borderRadius: 8, border: "none", color: "#fff", fontSize: 12 }}
-                      />
-                      <ReferenceLine y={120} stroke="#E11D48" strokeDasharray="3 3" opacity={0.6} />
-                      <ReferenceLine y={80} stroke="#2563EB" strokeDasharray="3 3" opacity={0.6} />
-                      <Line type="monotone" dataKey="systolic" name="Systolic" stroke="#E11D48" strokeWidth={2.5} dot={{ r: 3.5, fill: "#E11D48" }} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="diastolic" name="Diastolic" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 3.5, fill: "#2563EB" }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div style={{ height: 200, background: "#F9FAFB", borderRadius: 8 }} />
-              )}
-            </div>
-          </div>
-
-          {/* Recent Readings Table / Card List (Last 10) */}
-          <div style={{ background: "#fff", border: "1.5px solid #E5E7EB", borderRadius: 16, padding: "20px", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
-            <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: "#111827" }}>
-              Recent Readings <span style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 500 }}>({vitals.slice(0, 10).length})</span>
-            </h3>
-
-            {vitals.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 13, color: "#9CA3AF", fontStyle: "italic", textAlign: "center", padding: "16px 0" }}>
-                No readings recorded yet.
-              </p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {vitals.slice(0, 10).map(v => {
-                  const isSugar = v.type === "blood_sugar";
-                  const status = isSugar
-                    ? getBloodSugarStatus(v.value)
-                    : getBloodPressureStatus(v.systolic, v.diastolic);
-                  return (
-                    <div
-                      key={v.id}
-                      style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        padding: "10px 14px", borderRadius: 10, background: "#F9FAFB", border: "1px solid #F3F4F6",
-                        flexWrap: "wrap", gap: 10,
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ fontSize: 18 }}>{isSugar ? "🩸" : "💓"}</span>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
-                              {isSugar ? `${v.value} mg/dL` : `${v.systolic}/${v.diastolic} mmHg`}
-                            </span>
-                            <span style={{
-                              padding: "2px 7px", borderRadius: 999, fontSize: 10, fontWeight: 700,
-                              background: status.bg, color: status.color, border: `1px solid ${status.border}`,
-                            }}>
-                              {status.label}
-                            </span>
-                          </div>
-                          <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-                            {isSugar ? "Blood Sugar" : "Blood Pressure"}
-                            {v.notes && ` • "${v.notes}"`}
+                        {latestMedCheck.isDeaf && (
+                          <span style={{
+                            padding: "3px 8px", borderRadius: 6, background: "#EDE9FE",
+                            color: "#6D28D9", fontSize: 11, fontWeight: 700, border: "1px solid #DDD6FE",
+                          }}>
+                            🧏 SMS &amp; Telegram Channel
                           </span>
-                        </div>
+                        )}
+
+                        <span style={{ fontSize: 12, color: "#64748B" }}>
+                          Last Checked: {new Date(latestMedCheck.timestamp || latestMedCheck.called_at || latestMedCheck.createdAt || latestMedCheck.created_at || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
                       </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ fontSize: 12, color: "#6B7280" }}>
-                          {new Date(v.measuredAt).toLocaleString("en-IN", {
-                            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
-                          })}
-                        </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <button
-                          onClick={() => handleDeleteVital(v.id)}
-                          title="Delete entry"
+                          onClick={fetchLatestMedCheck}
                           style={{
-                            width: 26, height: 26, borderRadius: 6, border: "1px solid #FEE2E2",
-                            background: "#FFF5F5", cursor: "pointer", display: "flex", alignItems: "center",
-                            justifyContent: "center",
+                            padding: "4px 10px", borderRadius: 6, border: "1px solid #CBD5E1",
+                            background: "#F8FAFC", fontSize: 11, fontWeight: 600, color: "#475569", cursor: "pointer",
                           }}
                         >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5">
-                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                          </svg>
+                          🔄 Refresh Status
                         </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                      gap: 12,
+                      padding: "12px 14px",
+                      borderRadius: 10,
+                      background: "#F8FAFC",
+                      border: "1px solid #E2E8F0",
+                      fontSize: 12,
+                    }}>
+                      <div>
+                        <span style={{ color: "#64748B", display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>Phone Number</span>
+                        <strong style={{ color: "#0F172A" }}>{latestMedCheck.phone || latestMedCheck.phone_number || patient.phone || "—"}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: "#64748B", display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>User Response</span>
+                        <strong style={{
+                          color: isTaken ? "#059669" : isNotTaken ? "#DC2626" : isSkipped ? "#475569" : isRescheduled ? "#B45309" : "#0F172A",
+                          fontSize: 13,
+                        }}>
+                          {digitsVal ? `Key [${digitsVal}]` : (latestMedCheck.response || "Awaiting reply...")}
+                        </strong>
+                      </div>
+                      <div>
+                        <span style={{ color: "#64748B", display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>Outcome</span>
+                        <strong style={{ color: isTaken ? "#059669" : isNotTaken ? "#DC2626" : isSkipped ? "#475569" : isRescheduled ? "#B45309" : "#0F172A" }}>
+                          {isTaken
+                            ? "Success — Taken"
+                            : isNotTaken
+                            ? "Caregiver Alert Sent"
+                            : isSkipped
+                            ? "Dose Skipped"
+                            : isRescheduled
+                            ? "Rescheduled / Snoozed"
+                            : latestMedCheck.status}
+                        </strong>
+                      </div>
+                      <div>
+                        <span style={{ color: "#64748B", display: "block", fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>Channel</span>
+                        <span style={{ color: "#64748B", fontSize: 12, fontWeight: 600 }}>
+                          {latestMedCheck.isDeaf ? "SMS + Telegram 🤖" : "Twilio Voice Call 📞"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Simulation controls for instant testing */}
+                    <div style={{
+                      background: "#F0FDFA",
+                      border: "1px dashed #99F6E4",
+                      borderRadius: 10,
+                      padding: "10px 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: 8,
+                    }}>
+                      <div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#0F766E", display: "block" }}>
+                          🧪 Test Patient Reply Simulator (Broadcasts live to Telegram Bot):
+                        </span>
+                        <span style={{ fontSize: 11, color: "#115E59" }}>
+                          Test incoming patient response — taken, not taken, skip, or reschedule.
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <button
+                          onClick={() => handleSimulateReply("1")}
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: 7,
+                            border: "1.5px solid #A7F3D0",
+                            background: "#ECFDF5",
+                            color: "#065F46",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          1️⃣ Taken ✅
+                        </button>
+                        <button
+                          onClick={() => handleSimulateReply("2")}
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: 7,
+                            border: "1.5px solid #FECACA",
+                            background: "#FEF2F2",
+                            color: "#991B1B",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          2️⃣ Not Taken ❌
+                        </button>
+                        <button
+                          onClick={() => handleSimulateReply("3")}
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: 7,
+                            border: "1.5px solid #CBD5E1",
+                            background: "#F1F5F9",
+                            color: "#334155",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          3️⃣ Skip ⏭️
+                        </button>
+                        <button
+                          onClick={() => handleSimulateReply("4")}
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: 7,
+                            border: "1.5px solid #FDE68A",
+                            background: "#FEF3C7",
+                            color: "#92400E",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          4️⃣ Reschedule ⏰
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          ) : (
+            <div style={{
+              background: "#F8FAFC",
+              border: "1px dashed #CBD5E1",
+              borderRadius: 12,
+              padding: "16px",
+              textAlign: "center",
+              color: "#64748B",
+              fontSize: 13,
+            }}>
+              No medication check {patient.isDeaf ? "message" : "call"} has been made for {patient.name} yet today. Click &quot;{patient.isDeaf ? "Send Message Now" : "Call Patient Now"}&quot; to test the reply 1 / reply 2 flow.
+            </div>
+          )}
         </section>
 
         {/* ══════════════════════════════════════════════════════════════════════════
             MEDICATIONS SECTION
         ══════════════════════════════════════════════════════════════════════════ */}
-        <section className="fade-up">
+        <section style={{ marginBottom: 36 }} className="fade-up">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#111827", letterSpacing: "-0.01em" }}>
               Medications <span style={{ fontSize: 13, color: "#9CA3AF", fontWeight: 500 }}>({meds.length})</span>
@@ -874,224 +840,213 @@ export default function PatientDetailPage() {
             </div>
           )}
         </section>
-      </main>
 
-      {/* ══════════════════════════════════════════════════════════════════════════
-          MODAL: ADD BLOOD SUGAR
-      ══════════════════════════════════════════════════════════════════════════ */}
-      {showSugarModal && (
-        <div style={modalOverlayStyle} onClick={() => setShowSugarModal(false)}>
-          <div style={modalBoxStyle} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20 }}>🩸</span>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#111827" }}>Add Blood Sugar</h3>
-              </div>
-              <button
-                onClick={() => setShowSugarModal(false)}
-                style={{ border: "none", background: "none", fontSize: 18, cursor: "pointer", color: "#9CA3AF" }}
-              >
-                ✕
-              </button>
+        {/* ══════════════════════════════════════════════════════════════════════════
+            CAREGIVERS & FAMILY CONTACTS SECTION
+        ══════════════════════════════════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 36 }} className="fade-up">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div>
+              <h2 style={{ margin: "0 0 2px", fontSize: 18, fontWeight: 800, color: "#111827" }}>
+                Caregiver & Emergency Contacts
+              </h2>
+              <p style={{ margin: 0, fontSize: 12, color: "#6B7280" }}>
+                Primary family member or clinician contacts for SMS check-ins and emergency calls
+              </p>
             </div>
+            <LastSmsNote patientId={patient.id} />
+          </div>
 
-            <form onSubmit={handleSaveSugar} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div>
-                <label style={lblStyle}>Glucose Level (mg/dL) *</label>
-                <input
-                  type="number"
-                  step="1"
-                  min="20"
-                  max="600"
-                  required
-                  autoFocus
-                  placeholder="e.g. 110"
-                  value={sugarVal}
-                  onChange={e => setSugarVal(e.target.value)}
-                  style={inpStyle}
-                />
-                {sugarVal && (
-                  <div style={{ marginTop: 8 }}>
-                    {(() => {
-                      const st = getBloodSugarStatus(Number(sugarVal));
-                      return (
-                        <span style={{
-                          display: "inline-block", padding: "3px 10px", borderRadius: 999,
-                          fontSize: 11, fontWeight: 700, background: st.bg, color: st.color, border: `1px solid ${st.border}`
-                        }}>
-                          Status: {st.label} (Normal: 70–140 mg/dL)
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
+            {patient.caregivers && patient.caregivers.length > 0 ? (
+              patient.caregivers.map((cg, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    background: "#fff",
+                    border: "1.5px solid #E5E7EB",
+                    borderRadius: 14,
+                    padding: "18px 20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>👤</span>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>{cg.name}</span>
+                      </div>
+                      {cg.isPrimary && (
+                        <span
+                          style={{
+                            padding: "2px 8px",
+                            borderRadius: 6,
+                            background: "#ECFDF5",
+                            color: "#065F46",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            border: "1px solid #A7F3D0",
+                          }}
+                        >
+                          PRIMARY
                         </span>
-                      );
-                    })()}
+                      )}
+                    </div>
+                    <p style={{ margin: "0 0 4px", fontSize: 13, color: "#6B7280" }}>
+                      Relation: <strong style={{ color: "#374151" }}>{cg.relation}</strong>
+                    </p>
+                    <p style={{ margin: 0, fontSize: 14, color: "#0284C7", fontWeight: 700 }}>
+                      📞 {cg.phone}
+                    </p>
                   </div>
-                )}
-              </div>
 
-              <div>
-                <label style={lblStyle}>Measured At</label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={sugarDate}
-                  onChange={e => setSugarDate(e.target.value)}
-                  style={inpStyle}
-                />
-              </div>
-
-              <div>
-                <label style={lblStyle}>Notes (optional)</label>
-                <input
-                  placeholder="e.g. Fasting, 2h post-meal, after exercise"
-                  value={sugarNotes}
-                  onChange={e => setSugarNotes(e.target.value)}
-                  style={inpStyle}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowSugarModal(false)}
-                  style={{
-                    flex: 1, padding: "10px", borderRadius: 9, border: "1.5px solid #E5E7EB",
-                    background: "#fff", color: "#6B7280", fontWeight: 700, cursor: "pointer"
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!sugarVal}
-                  style={{
-                    flex: 2, padding: "10px", borderRadius: 9, border: "none",
-                    background: sugarVal ? "#0D9488" : "#D1D5DB", color: "#fff",
-                    fontWeight: 700, cursor: sugarVal ? "pointer" : "not-allowed"
-                  }}
-                >
-                  Save Reading
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════════════
-          MODAL: ADD BLOOD PRESSURE
-      ══════════════════════════════════════════════════════════════════════════ */}
-      {showBPModal && (
-        <div style={modalOverlayStyle} onClick={() => setShowBPModal(false)}>
-          <div style={modalBoxStyle} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20 }}>💓</span>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#111827" }}>Add Blood Pressure</h3>
-              </div>
-              <button
-                onClick={() => setShowBPModal(false)}
-                style={{ border: "none", background: "none", fontSize: 18, cursor: "pointer", color: "#9CA3AF" }}
+                  <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                    <button
+                      onClick={() => setShowSmsModal(true)}
+                      style={{
+                        flex: 1,
+                        padding: "7px 12px",
+                        borderRadius: 8,
+                        background: "#00C896",
+                        color: "#fff",
+                        border: "none",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      💬 SMS
+                    </button>
+                    <button
+                      onClick={() => setShowCallModal(true)}
+                      style={{
+                        flex: 1,
+                        padding: "7px 12px",
+                        borderRadius: 8,
+                        background: "#0F172A",
+                        color: "#fff",
+                        border: "none",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      📞 Call
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div
+                style={{
+                  background: "#fff",
+                  border: "1.5px dashed #E5E7EB",
+                  borderRadius: 14,
+                  padding: "20px",
+                  color: "#6B7280",
+                  fontSize: 13,
+                }}
               >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveBP} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={lblStyle}>Systolic (mmHg) *</label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="50"
-                    max="260"
-                    required
-                    autoFocus
-                    placeholder="e.g. 120"
-                    value={bpSys}
-                    onChange={e => setBpSys(e.target.value)}
-                    style={inpStyle}
-                  />
-                </div>
-                <div>
-                  <label style={lblStyle}>Diastolic (mmHg) *</label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="30"
-                    max="180"
-                    required
-                    placeholder="e.g. 80"
-                    value={bpDia}
-                    onChange={e => setBpDia(e.target.value)}
-                    style={inpStyle}
-                  />
-                </div>
+                No specific caregivers listed. Using patient primary phone ({patient.phone}).
               </div>
-
-              {bpSys && bpDia && (
-                <div>
-                  {(() => {
-                    const st = getBloodPressureStatus(Number(bpSys), Number(bpDia));
-                    return (
-                      <span style={{
-                        display: "inline-block", padding: "3px 10px", borderRadius: 999,
-                        fontSize: 11, fontWeight: 700, background: st.bg, color: st.color, border: `1px solid ${st.border}`
-                      }}>
-                        Status: {st.label} (Normal: &lt;120 and &lt;80 mmHg)
-                      </span>
-                    );
-                  })()}
-                </div>
-              )}
-
-              <div>
-                <label style={lblStyle}>Measured At</label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={bpDate}
-                  onChange={e => setBpDate(e.target.value)}
-                  style={inpStyle}
-                />
-              </div>
-
-              <div>
-                <label style={lblStyle}>Notes (optional)</label>
-                <input
-                  placeholder="e.g. Morning resting, after taking meds"
-                  value={bpNotes}
-                  onChange={e => setBpNotes(e.target.value)}
-                  style={inpStyle}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowBPModal(false)}
-                  style={{
-                    flex: 1, padding: "10px", borderRadius: 9, border: "1.5px solid #E5E7EB",
-                    background: "#fff", color: "#6B7280", fontWeight: 700, cursor: "pointer"
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!bpSys || !bpDia}
-                  style={{
-                    flex: 2, padding: "10px", borderRadius: 9, border: "none",
-                    background: bpSys && bpDia ? "#0D9488" : "#D1D5DB", color: "#fff",
-                    fontWeight: 700, cursor: bpSys && bpDia ? "pointer" : "not-allowed"
-                  }}
-                >
-                  Save Reading
-                </button>
-              </div>
-            </form>
+            )}
           </div>
-        </div>
-      )}
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════════════════
+            RECENT COMMUNICATION LOGS SECTION
+        ══════════════════════════════════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 36 }} className="fade-up">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div>
+              <h2 style={{ margin: "0 0 2px", fontSize: 18, fontWeight: 800, color: "#111827" }}>
+                Communication & Outreach History
+              </h2>
+              <p style={{ margin: 0, fontSize: 12, color: "#6B7280" }}>
+                Audit trail of automated and manual Twilio SMS messages and voice calls
+              </p>
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#64748B" }}>
+              {commLogs.length} Logged
+            </span>
+          </div>
+
+          {commLogs.length === 0 ? (
+            <div
+              style={{
+                background: "#fff",
+                border: "1.5px dashed #E5E7EB",
+                borderRadius: 14,
+                padding: "24px",
+                textAlign: "center",
+                color: "#9CA3AF",
+                fontSize: 13,
+              }}
+            >
+              No SMS or voice calls sent to this caregiver yet. Click &quot;Send SMS&quot; above to initiate outreach.
+            </div>
+          ) : (
+            <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14, overflow: "hidden" }}>
+              {commLogs.map((log, index) => (
+                <div
+                  key={log.id || index}
+                  style={{
+                    padding: "14px 18px",
+                    borderBottom: index < commLogs.length - 1 ? "1px solid #F3F4F6" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 14,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 18 }}>{log.type === "sms" ? "💬" : "📞"}</span>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>
+                          {log.type === "sms" ? "SMS Delivered" : "Voice Call Initiated"}
+                        </span>
+                        <span
+                          style={{
+                            padding: "2px 7px",
+                            borderRadius: 6,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: log.status === "sent" ? "#ECFDF5" : "#FEF2F2",
+                            color: log.status === "sent" ? "#065F46" : "#991B1B",
+                          }}
+                        >
+                          {log.status === "sent" ? "Delivered" : "Failed"}
+                        </span>
+                      </div>
+                      <p style={{ margin: "3px 0 0", fontSize: 12, color: "#6B7280" }}>
+                        To: <strong>{log.recipientName}</strong> ({log.to})
+                        {log.message && ` • "${log.message.slice(0, 75)}${log.message.length > 75 ? "..." : ""}"`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+                      {new Date(log.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} •{" "}
+                      {new Date(log.timestamp).toLocaleDateString([], { month: "short", day: "numeric" })}
+                    </span>
+                    {log.sid && (
+                      <div style={{ fontSize: 10, color: "#CBD5E1", fontFamily: "monospace" }}>
+                        SID: {log.sid.slice(0, 16)}...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
 
       {/* ══════════════════════════════════════════════════════════════════════════
           MODAL: EDIT PATIENT
@@ -1142,9 +1097,8 @@ export default function PatientDetailPage() {
                 </div>
               </div>
 
-              {/* Vitals indicators */}
               <div style={{ background: "#F0FDFA", border: "1.5px solid #99F6E4", borderRadius: 10, padding: "12px 14px", marginTop: 4 }}>
-                <p style={{ ...lblStyle, color: "#0D9488", marginBottom: 8 }}>Vitals Monitoring Flags</p>
+                <p style={{ ...lblStyle, color: "#0D9488", marginBottom: 8 }}>Condition Flags</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#111827" }}>
                     <input
@@ -1153,7 +1107,7 @@ export default function PatientDetailPage() {
                       onChange={e => setEditDiabetes(e.target.checked)}
                       style={{ width: 16, height: 16, accentColor: "#0D9488" }}
                     />
-                    Has Diabetes (Track Blood Sugar)
+                    Has Diabetes
                   </label>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#111827" }}>
                     <input
@@ -1162,9 +1116,28 @@ export default function PatientDetailPage() {
                       onChange={e => setEditHypertension(e.target.checked)}
                       style={{ width: 16, height: 16, accentColor: "#0D9488" }}
                     />
-                    Has Hypertension (Track Blood Pressure)
+                    Has Hypertension
                   </label>
                 </div>
+              </div>
+
+              {/* Hearing Accessibility */}
+              <div style={{ background: "#EEF2FF", border: editIsDeaf ? "1.5px solid #6366F1" : "1.5px solid #C7D2FE", borderRadius: 10, padding: "12px 14px", marginTop: 4 }}>
+                <p style={{ ...lblStyle, color: "#4F46E5", marginBottom: 8 }}>Hearing Accessibility</p>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                  <input
+                    type="checkbox"
+                    checked={editIsDeaf}
+                    onChange={e => setEditIsDeaf(e.target.checked)}
+                    style={{ width: 16, height: 16, accentColor: "#4F46E5", marginTop: 2 }}
+                  />
+                  <div>
+                    <span style={{ display: "block" }}>Patient is Deaf / Cannot Receive Calls 🧏</span>
+                    <span style={{ fontSize: 11, color: "#6B7280", fontWeight: 400, display: "block", marginTop: 2 }}>
+                      Switches medication checks to SMS & Telegram (Reply 1 = Taken, 2 = Not Taken)
+                    </span>
+                  </div>
+                </label>
               </div>
 
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
@@ -1194,6 +1167,47 @@ export default function PatientDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Twilio SMS & Call Modals */}
+      <SendSmsModal
+        isOpen={showSmsModal}
+        onClose={() => {
+          setShowSmsModal(false);
+          setCommLogs(getCommunications(id));
+        }}
+        patient={patient}
+        onSuccess={(msg) => {
+          setToast(msg);
+          setCommLogs(getCommunications(id));
+        }}
+      />
+      <CallCaregiverModal
+        isOpen={showCallModal}
+        onClose={() => {
+          setShowCallModal(false);
+          setCommLogs(getCommunications(id));
+        }}
+        patient={patient}
+        onSuccess={(msg) => {
+          setToast(msg);
+          setCommLogs(getCommunications(id));
+        }}
+      />
+      <CallPatientMedCheckModal
+        isOpen={showMedCheckModal}
+        onClose={() => {
+          setShowMedCheckModal(false);
+          fetchLatestMedCheck();
+        }}
+        patient={patient}
+        onSuccess={(msg) => {
+          setToast(msg);
+          fetchLatestMedCheck();
+        }}
+        onPatientUpdated={(updated) => {
+          setPatient(updated);
+        }}
+      />
     </div>
   );
 }

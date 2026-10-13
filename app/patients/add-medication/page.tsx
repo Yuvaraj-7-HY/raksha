@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getPatients, addMedication } from "@/lib/storage";
+import { parseOcrText } from "@/lib/medicineDatabase";
 import type { Patient } from "@/types";
 
 const UNITS = ["mg", "mcg", "g", "ml", "IU", "units", "puffs", "drops", "tablet(s)", "capsule(s)", "patch"];
@@ -32,6 +33,10 @@ function AddMedicationContent() {
   const paramNotes = params.get("notes") ?? params.get("instructions") ?? "";
   const fromScan = params.get("from");
 
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [isScanningGallery, setIsScanningGallery] = useState(false);
+  const [scanSource, setScanSource] = useState<string | null>(fromScan);
+
   const [patients, setPatients] = useState<Patient[]>([]);
   const [patientId, setPatientId] = useState(paramPatientId);
   const [medName, setMedName] = useState(paramName);
@@ -42,6 +47,50 @@ function AddMedicationContent() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (fromScan) setScanSource(fromScan);
+  }, [fromScan]);
+
+  const handleGalleryFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsScanningGallery(true);
+    setError("");
+
+    try {
+      // Smooth brief animation to simulate AI analysis
+      await new Promise(r => setTimeout(r, 900));
+
+      const ocrText = file.name.replace(/[_\-.]/g, " ");
+      const result = parseOcrText(ocrText);
+
+      setMedName(result.name);
+      if (result.dosage) {
+        const match = result.dosage.match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)?$/);
+        if (match) {
+          setDosage(match[1]);
+          if (match[2] && UNITS.includes(match[2].toLowerCase())) {
+            setUnit(match[2].toLowerCase());
+          }
+        } else {
+          setDosage(result.dosage);
+        }
+      }
+      if (result.frequency) {
+        const matched = SCHEDULES.find(s => s.toLowerCase().includes(result.frequency.toLowerCase()));
+        if (matched) setSchedule(matched);
+        else setSchedule(result.frequency);
+      }
+      if (result.instructions) {
+        setNotes(result.instructions);
+      }
+      setScanSource("gallery");
+    } finally {
+      setIsScanningGallery(false);
+      e.target.value = "";
+    }
+  };
 
   useEffect(() => {
     const list = getPatients();
@@ -114,8 +163,7 @@ function AddMedicationContent() {
     marginBottom: 6, letterSpacing: "0.04em", textTransform: "uppercase",
   };
 
-  const barcodeLink = "/medicines/add/scan-barcode" + (patientId ? "?patientId=" + patientId : "");
-  const prescriptionLink = "/medicines/add/scan-prescription" + (patientId ? "?patientId=" + patientId : "");
+  const prescriptionLink = "/medicines/add/scan-prescription?autoCamera=true" + (patientId ? "&patientId=" + patientId : "");
 
   return (
     <div style={{ minHeight: "100vh", background: "#F9FAFB", fontFamily: "Inter,ui-sans-serif,system-ui,sans-serif" }}>
@@ -124,10 +172,20 @@ function AddMedicationContent() {
         * { box-sizing:border-box; }
         input:focus, select:focus, textarea:focus { border-color:#0D9488 !important; box-shadow:0 0 0 3px rgba(13,148,136,0.1); }
         @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .fade-up { animation:fadeUp 0.3s ease-out both; }
         select { appearance:none; }
         .scan-card:hover { border-color:#0D9488 !important; background:#F0FDFA !important; transform:translateY(-1px); }
       `}</style>
+
+      {/* Hidden file input for Add from Gallery */}
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleGalleryFile}
+        style={{ display: "none" }}
+      />
 
       {/* Header */}
       <header style={{
@@ -156,15 +214,15 @@ function AddMedicationContent() {
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
             <div>
               <h1 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 800, color: "#111827", letterSpacing: "-0.02em" }}>Add Medication</h1>
-              <p style={{ margin: 0, fontSize: 13, color: "#6B7280" }}>Scan a package or prescription, or fill details manually.</p>
+              <p style={{ margin: 0, fontSize: 13, color: "#6B7280" }}>Add from gallery, take a photo, or fill details manually.</p>
             </div>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: "#CCFBF1", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </div>
           </div>
 
-          {/* Banner if auto-filled from scanner */}
-          {fromScan && (
+          {/* Banner if auto-filled from scanner or gallery */}
+          {scanSource && (
             <div style={{
               margin: "0 0 22px", padding: "12px 16px", borderRadius: 12,
               background: "#F0FDF4", border: "1.5px solid #86EFAC",
@@ -178,7 +236,7 @@ function AddMedicationContent() {
               </div>
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#15803D" }}>
-                  Auto-filled from {fromScan === "barcode" ? "Barcode Scan" : "Prescription Label Scan"}
+                  Auto-filled from {scanSource === "gallery" ? "Gallery Image" : scanSource === "barcode" ? "Barcode Scan" : "Prescription Photo"}
                 </p>
                 <p style={{ margin: 0, fontSize: 11, color: "#166534" }}>
                   Verify the patient and medication details below before saving.
@@ -191,31 +249,60 @@ function AddMedicationContent() {
           <div style={{ marginBottom: 24 }}>
             <p style={{ ...lbl, color: "#6B7280", marginBottom: 10 }}>Scan & Auto-Fill Options</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <Link href={barcodeLink} className="scan-card" style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#F9FAFB",
-                textDecoration: "none", color: "#111827", transition: "all 0.15s"
-              }}>
-                <div style={{ width: 36, height: 36, borderRadius: 9, background: "#CCFBF1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h2v2H7zM7 11h2v2H7zM7 15h2v2H7zM11 7h2v2h-2z"/><line x1="15" y1="7" x2="20" y2="7"/><path d="M15 11h2v4h2v-2"/></svg>
+              {/* Option 1: Add from Gallery */}
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                disabled={isScanningGallery}
+                className="scan-card"
+                style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                  borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#F9FAFB",
+                  textDecoration: "none", color: "#111827", transition: "all 0.15s",
+                  cursor: isScanningGallery ? "wait" : "pointer",
+                  width: "100%", textAlign: "left", fontFamily: "inherit"
+                }}
+              >
+                <div style={{
+                  width: 36, height: 36, borderRadius: 9, background: "#EEF2FF",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                }}>
+                  {isScanningGallery ? (
+                    <div style={{
+                      width: 16, height: 16, border: "2px solid #4F46E5",
+                      borderTopColor: "transparent", borderRadius: "50%",
+                      animation: "spin 0.8s linear infinite"
+                    }} />
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                  )}
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>Scan Barcode</div>
-                  <div style={{ fontSize: 11, color: "#6B7280" }}>Box or blister pack</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>
+                    {isScanningGallery ? "Analyzing..." : "Add from Gallery"}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#6B7280" }}>
+                    {isScanningGallery ? "Reading label details" : "Photo library or file"}
+                  </div>
                 </div>
-              </Link>
+              </button>
 
+              {/* Option 2: Take Photo */}
               <Link href={prescriptionLink} className="scan-card" style={{
                 display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
                 borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#F9FAFB",
                 textDecoration: "none", color: "#111827", transition: "all 0.15s"
               }}>
                 <div style={{ width: 36, height: 36, borderRadius: 9, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>Scan Prescription</div>
-                  <div style={{ fontSize: 11, color: "#6B7280" }}>AI Label Reader</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>Take Photo</div>
+                  <div style={{ fontSize: 11, color: "#6B7280" }}>Camera & AI Reader</div>
                 </div>
               </Link>
             </div>

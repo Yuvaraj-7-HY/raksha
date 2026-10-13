@@ -20,6 +20,7 @@ export default function NewPatientPage() {
   const [conditions, setConditions] = useState<string[]>([]);
   const [hasDiabetes, setHasDiabetes] = useState(false);
   const [hasHypertension, setHasHypertension] = useState(false);
+  const [isDeaf, setIsDeaf] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,6 +30,7 @@ export default function NewPatientPage() {
       setConditions(prev => [...prev, trimmed]);
       if (/diabetes/i.test(trimmed)) setHasDiabetes(true);
       if (/hypertension|blood pressure/i.test(trimmed)) setHasHypertension(true);
+      if (/deaf|hearing/i.test(trimmed)) setIsDeaf(true);
     }
     setCondInput("");
   }
@@ -49,6 +51,7 @@ export default function NewPatientPage() {
       conditions,
       hasDiabetes,
       hasHypertension,
+      isDeaf,
     });
     sessionStorage.setItem("raksha_toast", name.trim() + " added successfully!");
     router.push("/patients");
@@ -196,6 +199,39 @@ export default function NewPatientPage() {
                   </div>
                 </label>
               </div>
+            </div>
+
+            {/* Hearing Accessibility Setup for Deaf Patients */}
+            <div style={{ background: "#EEF2FF", border: isDeaf ? "1.5px solid #6366F1" : "1.5px solid #C7D2FE", borderRadius: 12, padding: "16px 18px", transition: "all 0.15s" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <p style={{ ...lbl, color: "#4F46E5", margin: 0 }}>Hearing Accessibility</p>
+                <span style={{ fontSize: 11, background: "#E0E7FF", color: "#4338CA", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                  SMS & Telegram
+                </span>
+              </div>
+              <p style={{ margin: "0 0 12px", fontSize: 12, color: "#4B5563" }}>
+                For deaf or hard of hearing patients who cannot receive voice calls, Raksha sends direct medication reminders via SMS and Telegram with reply instructions ("Reply 1 if taken, 2 if not taken").
+              </p>
+              <label style={{
+                display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px",
+                borderRadius: 10, background: "#fff", border: isDeaf ? "1.5px solid #4F46E5" : "1.5px solid #E5E7EB",
+                cursor: "pointer", transition: "all 0.15s"
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isDeaf}
+                  onChange={e => setIsDeaf(e.target.checked)}
+                  style={{ width: 18, height: 18, accentColor: "#4F46E5", cursor: "pointer", marginTop: 2 }}
+                />
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", display: "block" }}>
+                    Patient is Deaf / Cannot Receive Voice Calls 🧏
+                  </span>
+                  <span style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.4, display: "block", marginTop: 2 }}>
+                    Automatically switches to SMS & Telegram medication check (press 1 if taken, 2 if not) instead of voice calls.
+                  </span>
+                </div>
+              </label>
             </div>
 
             <div style={{ display:"flex", gap:10, paddingTop:8, borderTop:"1px solid #F3F4F6", marginTop:4 }}>

@@ -14,6 +14,7 @@ import {
   type CallOutcome,
   type ContactStatus,
 } from "@/lib/supabaseServer";
+import { scheduleCaregiverAlert } from "@/lib/familyAlert";
 
 const TERMINAL_STATUSES = new Set([
   "completed", "no-answer", "busy", "failed", "canceled",
@@ -58,6 +59,14 @@ export async function POST(req: NextRequest) {
 
       updatePatientStatus(patientId, status)
         .catch((e) => console.error("[status] updatePatientStatus failed:", e));
+
+      // If call is not picked, message goes to caregiver in 1 minute
+      scheduleCaregiverAlert({
+        patientId,
+        reason: "unreachable",
+        customMessage: `Raksha Alert: Automated call to patient was not answered (${callStatus}). Please check on them.`,
+        delayMs: 60_000,
+      });
     }
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, useMemo } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
@@ -8,30 +8,16 @@ import {
   deletePatient,
   getMedications,
   deleteMedication,
-  getVitals,
-  deleteVitalReading,
-  addVitalReading,
-  getBloodSugarStatus,
-  getBloodPressureStatus,
+  getPrimaryCaregiver,
 } from "@/lib/storage";
-import type { Patient, Medication, VitalReading } from "@/types";
+import type { Patient, Medication } from "@/types";
+import {
+  SendSmsModal,
+  CallCaregiverModal,
+  LastSmsNote,
+} from "./components/CommunicationModals";
 
-function EmptyState({ tab }: { tab: "patients" | "vitals" | "medications" }) {
-  if (tab === "vitals") {
-    return (
-      <div style={{ textAlign: "center", padding: "64px 24px", background: "#fff", borderRadius: 16, border: "1.5px dashed #E5E7EB" }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: "50%", background: "#EFF6FF",
-          display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px"
-        }}>
-          <span style={{ fontSize: 24 }}>🩸</span>
-        </div>
-        <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>No vitals recorded yet</p>
-        <p style={{ fontSize: 13, color: "#9CA3AF", margin: "0 0 20px" }}>Log blood glucose and blood pressure readings for your patients.</p>
-      </div>
-    );
-  }
-
+function EmptyState({ tab }: { tab: "patients" | "medications" }) {
   if (tab === "medications") {
     return (
       <div style={{ textAlign: "center", padding: "64px 24px", background: "#fff", borderRadius: 16, border: "1.5px dashed #E5E7EB" }}>
@@ -85,47 +71,27 @@ function Skeleton() {
   );
 }
 
-function toLocalDatetimeString(d = new Date()) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const year = d.getFullYear();
-  const month = pad(d.getMonth() + 1);
-  const day = pad(d.getDate());
-  const hours = pad(d.getHours());
-  const minutes = pad(d.getMinutes());
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
 function PatientsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const qTab = searchParams.get("tab");
-  const initialTab = qTab === "vitals" ? "vitals" : qTab === "medications" ? "medications" : "patients";
+  const initialTab = qTab === "medications" ? "medications" : "patients";
 
-  const [tab, setTab] = useState<"patients" | "vitals" | "medications">(initialTab);
+  const [tab, setTab] = useState<"patients" | "medications">(initialTab);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
-  const [vitals, setVitals] = useState<VitalReading[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState<string | null>(null);
 
-  // Quick modals for adding vitals
-  const [modalType, setModalType] = useState<"sugar" | "bp" | null>(null);
-  const [modalPatientId, setModalPatientId] = useState("");
-  const [sugarVal, setSugarVal] = useState("");
-  const [sugarDate, setSugarDate] = useState("");
-  const [sugarNotes, setSugarNotes] = useState("");
-  const [bpSys, setBpSys] = useState("");
-  const [bpDia, setBpDia] = useState("");
-  const [bpDate, setBpDate] = useState("");
-  const [bpNotes, setBpNotes] = useState("");
+  // Twilio Communication Modals
+  const [smsModalPatient, setSmsModalPatient] = useState<Patient | null>(null);
+  const [callModalPatient, setCallModalPatient] = useState<Patient | null>(null);
 
   useEffect(() => {
-    if (searchParams.get("tab") === "vitals") {
-      setTab("vitals");
-    } else if (searchParams.get("tab") === "medications") {
+    if (searchParams.get("tab") === "medications") {
       setTab("medications");
-    } else if (searchParams.get("tab") === "patients") {
+    } else {
       setTab("patients");
     }
   }, [searchParams]);
@@ -133,7 +99,6 @@ function PatientsContent() {
   const refreshAll = () => {
     setPatients(getPatients());
     setMedications(getMedications());
-    setVitals(getVitals());
   };
 
   useEffect(() => {
@@ -148,13 +113,13 @@ function PatientsContent() {
     }
   }, []);
 
-  function handleTabChange(nextTab: "patients" | "vitals" | "medications") {
+  function handleTabChange(nextTab: "patients" | "medications") {
     setTab(nextTab);
     router.replace(`/patients?tab=${nextTab}`, { scroll: false });
   }
 
   function handleDeletePatient(id: string, name: string) {
-    if (!confirm(`Delete patient "${name}" and all their medications and vitals?`)) return;
+    if (!confirm(`Delete patient "${name}" and all their medications?`)) return;
     deletePatient(id);
     refreshAll();
     setToast(`Patient "${name}" deleted.`);
@@ -169,73 +134,6 @@ function PatientsContent() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  function handleDeleteVital(vitalId: string) {
-    if (!confirm("Delete this vital reading?")) return;
-    deleteVitalReading(vitalId);
-    setVitals(getVitals());
-    setToast("Vital reading deleted.");
-    setTimeout(() => setToast(null), 3000);
-  }
-
-  function openAddSugar(patientId?: string) {
-    const pid = patientId || (patients[0]?.id ?? "");
-    setModalPatientId(pid);
-    setSugarVal("");
-    setSugarDate(toLocalDatetimeString());
-    setSugarNotes("");
-    setModalType("sugar");
-  }
-
-  function openAddBP(patientId?: string) {
-    const pid = patientId || (patients[0]?.id ?? "");
-    setModalPatientId(pid);
-    setBpSys("");
-    setBpDia("");
-    setBpDate(toLocalDatetimeString());
-    setBpNotes("");
-    setModalType("bp");
-  }
-
-  function handleSaveSugar(e: React.FormEvent) {
-    e.preventDefault();
-    const val = Number(sugarVal);
-    if (!val || val <= 0 || !modalPatientId) return;
-    const measuredAt = sugarDate ? new Date(sugarDate).toISOString() : new Date().toISOString();
-    addVitalReading({
-      patientId: modalPatientId,
-      type: "blood_sugar",
-      value: val,
-      measuredAt,
-      notes: sugarNotes.trim() || undefined,
-    });
-    setModalType(null);
-    refreshAll();
-    const targetPatient = patients.find(p => p.id === modalPatientId);
-    setToast(`Blood sugar (${val} mg/dL) saved for ${targetPatient?.name || "patient"}!`);
-    setTimeout(() => setToast(null), 3000);
-  }
-
-  function handleSaveBP(e: React.FormEvent) {
-    e.preventDefault();
-    const sys = Number(bpSys);
-    const dia = Number(bpDia);
-    if (!sys || !dia || sys <= 0 || dia <= 0 || !modalPatientId) return;
-    const measuredAt = bpDate ? new Date(bpDate).toISOString() : new Date().toISOString();
-    addVitalReading({
-      patientId: modalPatientId,
-      type: "blood_pressure",
-      systolic: sys,
-      diastolic: dia,
-      measuredAt,
-      notes: bpNotes.trim() || undefined,
-    });
-    setModalType(null);
-    refreshAll();
-    const targetPatient = patients.find(p => p.id === modalPatientId);
-    setToast(`Blood pressure (${sys}/${dia} mmHg) saved for ${targetPatient?.name || "patient"}!`);
-    setTimeout(() => setToast(null), 3000);
-  }
-
   // Filtered patients
   const filteredPatients = patients.filter(p =>
     !search ||
@@ -243,23 +141,6 @@ function PatientsContent() {
     p.conditions.some(c => c.toLowerCase().includes(search.toLowerCase())) ||
     medications.some(m => m.patientId === p.id && m.name.toLowerCase().includes(search.toLowerCase()))
   );
-
-  // Filtered vitals
-  const filteredVitals = vitals
-    .slice()
-    .sort((a, b) => new Date(b.measuredAt).getTime() - new Date(a.measuredAt).getTime())
-    .filter(v => {
-      const pat = patients.find(p => p.id === v.patientId);
-      const patName = pat ? pat.name.toLowerCase() : "";
-      const query = search.toLowerCase();
-      return (
-        !search ||
-        patName.includes(query) ||
-        (v.type === "blood_sugar" && String(v.value).includes(query)) ||
-        (v.type === "blood_pressure" && `${v.systolic}/${v.diastolic}`.includes(query)) ||
-        (v.notes && v.notes.toLowerCase().includes(query))
-      );
-    });
 
   // Filtered medications
   const filteredMedications = medications.filter(m => {
@@ -275,23 +156,6 @@ function PatientsContent() {
   });
 
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-
-  const modalOverlayStyle: React.CSSProperties = {
-    position: "fixed", inset: 0, background: "rgba(17,24,39,0.55)", backdropFilter: "blur(3px)",
-    zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
-  };
-  const modalBoxStyle: React.CSSProperties = {
-    background: "#fff", borderRadius: 18, width: "100%", maxWidth: 440,
-    boxShadow: "0 20px 40px rgba(0,0,0,0.18)", padding: "28px 26px", animation: "fadeUp 0.25s ease-out",
-  };
-  const inpStyle: React.CSSProperties = {
-    width: "100%", padding: "10px 14px", borderRadius: 9, border: "1.5px solid #E5E7EB",
-    fontSize: 14, outline: "none", color: "#111827", background: "#fff", boxSizing: "border-box",
-  };
-  const lblStyle: React.CSSProperties = {
-    display: "block", fontSize: 11, fontWeight: 700, color: "#4B5563",
-    textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6,
-  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#F9FAFB", fontFamily: "Inter,ui-sans-serif,system-ui,sans-serif" }}>
@@ -342,52 +206,33 @@ function PatientsContent() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <button
-            onClick={() => openAddSugar()}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 13px",
-              borderRadius: 9, background: "#0D9488", color: "#fff", border: "none",
-              fontSize: 12, fontWeight: 700, cursor: "pointer",
-            }}
-          >
-            + Add Sugar
-          </button>
-          <button
-            onClick={() => openAddBP()}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 13px",
-              borderRadius: 9, background: "#1E293B", color: "#fff", border: "none",
-              fontSize: 12, fontWeight: 700, cursor: "pointer",
-            }}
-          >
-            + Add BP
-          </button>
           <Link href="/patients/add-medication" style={{
             display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "7px 14px", borderRadius: 9, border: "1.5px solid #0D9488",
-            color: "#0D9488", textDecoration: "none", fontSize: 12, fontWeight: 700, background: "#fff"
+            padding: "8px 14px", borderRadius: 9, border: "1.5px solid #0D9488",
+            color: "#0D9488", textDecoration: "none", fontSize: 13, fontWeight: 700, background: "#fff"
           }}>
             + Add Med
           </Link>
           <Link href="/patients/new" style={{
             display: "inline-flex", alignItems: "center", gap: 6,
             padding: "8px 14px", borderRadius: 9, background: "#0D9488",
-            color: "#fff", textDecoration: "none", fontSize: 12, fontWeight: 700
+            color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 700
           }}>
             + Add Patient
           </Link>
-          <Link href="/dashboard" style={{
-            padding: "8px 12px", borderRadius: 9,
-            border: "1px solid #E5E7EB", color: "#6B7280", textDecoration: "none", fontSize: 12, fontWeight: 600, background: "#fff"
+          <Link href="/today" style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            padding: "8px 14px", borderRadius: 9, background: "#00C896",
+            color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 700
           }}>
-            ← Dashboard
+            📅 Today&apos;s Schedule
           </Link>
         </div>
       </header>
 
       <main style={{ maxWidth: 940, margin: "0 auto", padding: "32px 24px 64px" }}>
         {/* Stats Row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }} className="fade-up">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, marginBottom: 24 }} className="fade-up">
           <div style={{
             background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14,
             padding: "18px 22px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
@@ -405,18 +250,6 @@ function PatientsContent() {
             padding: "18px 22px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
           }}>
             <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              Vitals Logged
-            </p>
-            <p style={{ margin: 0, fontSize: 28, fontWeight: 800, color: "#0D9488", letterSpacing: "-0.03em" }}>
-              {vitals.length}
-            </p>
-          </div>
-
-          <div style={{
-            background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14,
-            padding: "18px 22px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
-          }}>
-            <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Active Medications
             </p>
             <p style={{ margin: 0, fontSize: 28, fontWeight: 800, color: "#2563EB", letterSpacing: "-0.03em" }}>
@@ -425,7 +258,7 @@ function PatientsContent() {
           </div>
         </div>
 
-        {/* Unified 3-Way Tab Switcher */}
+        {/* 2-Way Tab Switcher */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           marginBottom: 20, gap: 16, flexWrap: "wrap"
@@ -447,22 +280,6 @@ function PatientsContent() {
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
               Patients ({patients.length})
-            </button>
-
-            <button
-              onClick={() => handleTabChange("vitals")}
-              style={{
-                display: "flex", alignItems: "center", gap: 7,
-                padding: "8px 16px", borderRadius: 10, border: "none",
-                background: tab === "vitals" ? "#fff" : "transparent",
-                color: tab === "vitals" ? "#0D9488" : "#6B7280",
-                fontSize: 13, fontWeight: 700, cursor: "pointer",
-                boxShadow: tab === "vitals" ? "0 2px 6px rgba(0,0,0,0.08)" : "none",
-                transition: "all 0.15s"
-              }}
-            >
-              <span style={{ fontSize: 14 }}>🩸</span>
-              Vitals Log ({vitals.length})
             </button>
 
             <button
@@ -496,8 +313,6 @@ function PatientsContent() {
               placeholder={
                 tab === "patients"
                   ? "Search patient name, condition..."
-                  : tab === "vitals"
-                  ? "Search vitals by patient, reading, or notes..."
                   : "Search medication name, dosage, or patient..."
               }
               style={{
@@ -526,44 +341,16 @@ function PatientsContent() {
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {filteredPatients.map((p, i) => {
                   const patientMeds = medications.filter(m => m.patientId === p.id);
-                  const patientVitals = vitals.filter(v => v.patientId === p.id);
-                  const latestSugar = patientVitals.find(v => v.type === "blood_sugar");
-                  const latestBP = patientVitals.find(v => v.type === "blood_pressure");
 
                   return (
-                    <PatientCardWithVitals
+                    <PatientCard
                       key={p.id}
                       patient={p}
                       meds={patientMeds}
-                      latestSugar={latestSugar}
-                      latestBP={latestBP}
                       delay={i * 30}
                       onDelete={handleDeletePatient}
-                      onAddSugar={() => openAddSugar(p.id)}
-                      onAddBP={() => openAddBP(p.id)}
-                    />
-                  );
-                })}
-              </div>
-            )
-          ) : tab === "vitals" ? (
-            vitals.length === 0 ? (
-              <EmptyState tab="vitals" />
-            ) : filteredVitals.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px", color: "#9CA3AF", fontSize: 14 }}>
-                No vitals match &quot;{search}&quot;
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {filteredVitals.map((v, i) => {
-                  const pat = patients.find(p => p.id === v.patientId);
-                  return (
-                    <VitalHubCard
-                      key={v.id}
-                      vital={v}
-                      patient={pat}
-                      delay={i * 25}
-                      onDelete={() => handleDeleteVital(v.id)}
+                      onSendSms={() => setSmsModalPatient(p)}
+                      onCall={() => setCallModalPatient(p)}
                     />
                   );
                 })}
@@ -596,280 +383,40 @@ function PatientsContent() {
         </div>
       </main>
 
-      {/* ══════════════════════════════════════════════════════════════════════════
-          MODAL: ADD BLOOD SUGAR
-      ══════════════════════════════════════════════════════════════════════════ */}
-      {modalType === "sugar" && (
-        <div style={modalOverlayStyle} onClick={() => setModalType(null)}>
-          <div style={modalBoxStyle} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20 }}>🩸</span>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#111827" }}>Add Blood Sugar Reading</h3>
-              </div>
-              <button
-                onClick={() => setModalType(null)}
-                style={{ border: "none", background: "none", fontSize: 18, cursor: "pointer", color: "#9CA3AF" }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveSugar} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div>
-                <label style={lblStyle}>Select Patient *</label>
-                <select
-                  required
-                  value={modalPatientId}
-                  onChange={e => setModalPatientId(e.target.value)}
-                  style={{ ...inpStyle, cursor: "pointer" }}
-                >
-                  {patients.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} {p.age ? `(${p.age} yrs)` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={lblStyle}>Glucose Level (mg/dL) *</label>
-                <input
-                  type="number"
-                  step="1"
-                  min="20"
-                  max="600"
-                  required
-                  autoFocus
-                  placeholder="e.g. 110"
-                  value={sugarVal}
-                  onChange={e => setSugarVal(e.target.value)}
-                  style={inpStyle}
-                />
-                {sugarVal && (
-                  <div style={{ marginTop: 8 }}>
-                    {(() => {
-                      const st = getBloodSugarStatus(Number(sugarVal));
-                      return (
-                        <span style={{
-                          display: "inline-block", padding: "3px 10px", borderRadius: 999,
-                          fontSize: 11, fontWeight: 700, background: st.bg, color: st.color, border: `1px solid ${st.border}`
-                        }}>
-                          Status: {st.label} (Normal: 70–140 mg/dL)
-                        </span>
-                      );
-                    })()}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label style={lblStyle}>Measured At</label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={sugarDate}
-                  onChange={e => setSugarDate(e.target.value)}
-                  style={inpStyle}
-                />
-              </div>
-
-              <div>
-                <label style={lblStyle}>Notes (optional)</label>
-                <input
-                  placeholder="e.g. Fasting, 2h post-meal, after exercise"
-                  value={sugarNotes}
-                  onChange={e => setSugarNotes(e.target.value)}
-                  style={inpStyle}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => setModalType(null)}
-                  style={{
-                    flex: 1, padding: "10px", borderRadius: 9, border: "1.5px solid #E5E7EB",
-                    background: "#fff", color: "#6B7280", fontWeight: 700, cursor: "pointer"
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!sugarVal || !modalPatientId}
-                  style={{
-                    flex: 2, padding: "10px", borderRadius: 9, border: "none",
-                    background: sugarVal && modalPatientId ? "#0D9488" : "#D1D5DB", color: "#fff",
-                    fontWeight: 700, cursor: sugarVal && modalPatientId ? "pointer" : "not-allowed"
-                  }}
-                >
-                  Save Reading
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════════════
-          MODAL: ADD BLOOD PRESSURE
-      ══════════════════════════════════════════════════════════════════════════ */}
-      {modalType === "bp" && (
-        <div style={modalOverlayStyle} onClick={() => setModalType(null)}>
-          <div style={modalBoxStyle} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20 }}>💓</span>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#111827" }}>Add Blood Pressure Reading</h3>
-              </div>
-              <button
-                onClick={() => setModalType(null)}
-                style={{ border: "none", background: "none", fontSize: 18, cursor: "pointer", color: "#9CA3AF" }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveBP} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div>
-                <label style={lblStyle}>Select Patient *</label>
-                <select
-                  required
-                  value={modalPatientId}
-                  onChange={e => setModalPatientId(e.target.value)}
-                  style={{ ...inpStyle, cursor: "pointer" }}
-                >
-                  {patients.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} {p.age ? `(${p.age} yrs)` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={lblStyle}>Systolic (mmHg) *</label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="50"
-                    max="260"
-                    required
-                    autoFocus
-                    placeholder="e.g. 120"
-                    value={bpSys}
-                    onChange={e => setBpSys(e.target.value)}
-                    style={inpStyle}
-                  />
-                </div>
-                <div>
-                  <label style={lblStyle}>Diastolic (mmHg) *</label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="30"
-                    max="180"
-                    required
-                    placeholder="e.g. 80"
-                    value={bpDia}
-                    onChange={e => setBpDia(e.target.value)}
-                    style={inpStyle}
-                  />
-                </div>
-              </div>
-
-              {bpSys && bpDia && (
-                <div>
-                  {(() => {
-                    const st = getBloodPressureStatus(Number(bpSys), Number(bpDia));
-                    return (
-                      <span style={{
-                        display: "inline-block", padding: "3px 10px", borderRadius: 999,
-                        fontSize: 11, fontWeight: 700, background: st.bg, color: st.color, border: `1px solid ${st.border}`
-                      }}>
-                        Status: {st.label} (Normal: &lt;120 and &lt;80 mmHg)
-                      </span>
-                    );
-                  })()}
-                </div>
-              )}
-
-              <div>
-                <label style={lblStyle}>Measured At</label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={bpDate}
-                  onChange={e => setBpDate(e.target.value)}
-                  style={inpStyle}
-                />
-              </div>
-
-              <div>
-                <label style={lblStyle}>Notes (optional)</label>
-                <input
-                  placeholder="e.g. Morning resting, after taking meds"
-                  value={bpNotes}
-                  onChange={e => setBpNotes(e.target.value)}
-                  style={inpStyle}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => setModalType(null)}
-                  style={{
-                    flex: 1, padding: "10px", borderRadius: 9, border: "1.5px solid #E5E7EB",
-                    background: "#fff", color: "#6B7280", fontWeight: 700, cursor: "pointer"
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!bpSys || !bpDia || !modalPatientId}
-                  style={{
-                    flex: 2, padding: "10px", borderRadius: 9, border: "none",
-                    background: bpSys && bpDia && modalPatientId ? "#0D9488" : "#D1D5DB", color: "#fff",
-                    fontWeight: 700, cursor: bpSys && bpDia && modalPatientId ? "pointer" : "not-allowed"
-                  }}
-                >
-                  Save Reading
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Twilio SMS & Call Modals */}
+      <SendSmsModal
+        isOpen={!!smsModalPatient}
+        onClose={() => setSmsModalPatient(null)}
+        patient={smsModalPatient}
+        onSuccess={(msg) => setToast(msg)}
+      />
+      <CallCaregiverModal
+        isOpen={!!callModalPatient}
+        onClose={() => setCallModalPatient(null)}
+        patient={callModalPatient}
+        onSuccess={(msg) => setToast(msg)}
+      />
     </div>
   );
 }
 
-function PatientCardWithVitals({
+function PatientCard({
   patient: p,
   meds,
-  latestSugar,
-  latestBP,
   delay,
   onDelete,
-  onAddSugar,
-  onAddBP,
+  onSendSms,
+  onCall,
 }: {
   patient: Patient;
   meds: Medication[];
-  latestSugar?: VitalReading;
-  latestBP?: VitalReading;
   delay: number;
   onDelete: (id: string, name: string) => void;
-  onAddSugar: () => void;
-  onAddBP: () => void;
+  onSendSms: () => void;
+  onCall: () => void;
 }) {
   const initials = p.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-  const sugarStatus = getBloodSugarStatus(latestSugar?.value);
-  const bpStatus = getBloodPressureStatus(latestBP?.systolic, latestBP?.diastolic);
+  const primaryCaregiver = getPrimaryCaregiver(p);
 
   return (
     <div
@@ -899,22 +446,26 @@ function PatientCardWithVitals({
             </Link>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <button
-                onClick={onAddSugar}
+                onClick={onSendSms}
                 style={{
-                  fontSize: 11, fontWeight: 700, color: "#0D9488",
-                  padding: "4px 8px", borderRadius: 7, background: "#CCFBF1", border: "none", cursor: "pointer"
+                  fontSize: 11, fontWeight: 700, color: "#065F46",
+                  padding: "4px 9px", borderRadius: 7, background: "#ECFDF5", border: "1px solid #A7F3D0", cursor: "pointer",
+                  display: "inline-flex", alignItems: "center", gap: 3
                 }}
+                title="Send SMS to caregiver via Twilio"
               >
-                + Sugar
+                💬 SMS
               </button>
               <button
-                onClick={onAddBP}
+                onClick={onCall}
                 style={{
-                  fontSize: 11, fontWeight: 700, color: "#1E293B",
-                  padding: "4px 8px", borderRadius: 7, background: "#F1F5F9", border: "none", cursor: "pointer"
+                  fontSize: 11, fontWeight: 700, color: "#1E3A8A",
+                  padding: "4px 9px", borderRadius: 7, background: "#EFF6FF", border: "1px solid #BFDBFE", cursor: "pointer",
+                  display: "inline-flex", alignItems: "center", gap: 3
                 }}
+                title="Call caregiver"
               >
-                + BP
+                📞 Call
               </button>
               <Link
                 href={`/patients/add-medication?patientId=${p.id}`}
@@ -946,6 +497,19 @@ function PatientCardWithVitals({
             {p.phone && ` • ${p.phone}`}
           </p>
 
+          {/* Caregiver info + Last SMS Note */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+            {primaryCaregiver && (
+              <span style={{
+                fontSize: 11, fontWeight: 600, color: "#475569", background: "#F8FAFC",
+                padding: "2px 8px", borderRadius: 6, border: "1px solid #E2E8F0"
+              }}>
+                👤 Caregiver: <strong style={{ color: "#0F172A" }}>{primaryCaregiver.name}</strong> ({primaryCaregiver.relation} • {primaryCaregiver.phone})
+              </span>
+            )}
+            <LastSmsNote patientId={p.id} />
+          </div>
+
           <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
             {p.hasDiabetes && (
               <span style={{
@@ -969,143 +533,20 @@ function PatientCardWithVitals({
         </div>
       </div>
 
-      {/* Connected Vitals Bar */}
+      {/* Patient Summary Footer */}
       <div style={{
         paddingTop: 10, borderTop: "1px solid #F3F4F6",
-        display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8
+        display: "flex", alignItems: "center", justifyContent: "space-between"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            Latest Vitals:
-          </span>
+        <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 600 }}>
+          💊 {meds.length} Active Medication{meds.length !== 1 ? "s" : ""}
+        </span>
 
-          {latestSugar ? (
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: 5,
-              padding: "2px 8px", borderRadius: 6, background: sugarStatus.bg,
-              border: `1px solid ${sugarStatus.border}`, fontSize: 11, fontWeight: 700, color: sugarStatus.color
-            }}>
-              🩸 Sugar: {latestSugar.value} mg/dL ({sugarStatus.label})
-            </span>
-          ) : (
-            <span style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>No sugar logged</span>
-          )}
-
-          {latestBP ? (
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: 5,
-              padding: "2px 8px", borderRadius: 6, background: bpStatus.bg,
-              border: `1px solid ${bpStatus.border}`, fontSize: 11, fontWeight: 700, color: bpStatus.color
-            }}>
-              💓 BP: {latestBP.systolic}/{latestBP.diastolic} mmHg ({bpStatus.label})
-            </span>
-          ) : (
-            <span style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>No BP logged</span>
-          )}
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-            {meds.length} Med{meds.length !== 1 ? "s" : ""}
-          </span>
-          <Link href={`/patients/${p.id}`} style={{
-            fontSize: 12, fontWeight: 700, color: "#0D9488", textDecoration: "none"
-          }}>
-            View Details →
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function VitalHubCard({
-  vital: v,
-  patient,
-  delay,
-  onDelete
-}: {
-  vital: VitalReading;
-  patient?: Patient;
-  delay: number;
-  onDelete: () => void;
-}) {
-  const isSugar = v.type === "blood_sugar";
-  const status = isSugar ? getBloodSugarStatus(v.value) : getBloodPressureStatus(v.systolic, v.diastolic);
-
-  return (
-    <div
-      className="med-card"
-      style={{
-        background: "#fff", border: "1.5px solid #E5E7EB", borderRadius: 14,
-        padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 16,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)", borderLeft: isSugar ? "4px solid #0D9488" : "4px solid #E11D48",
-        transition: "all 0.18s", animation: `fadeUp 0.3s ease-out ${delay}ms both`
-      }}
-    >
-      <div style={{
-        width: 40, height: 40, borderRadius: 10, background: isSugar ? "#CCFBF1" : "#FEE2E2",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
-      }}>
-        <span style={{ fontSize: 20 }}>{isSugar ? "🩸" : "💓"}</span>
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>
-                {isSugar ? `${v.value} mg/dL` : `${v.systolic}/${v.diastolic} mmHg`}
-              </span>
-              <span style={{
-                padding: "2px 8px", borderRadius: 5, background: status.bg,
-                color: status.color, border: `1px solid ${status.border}`, fontSize: 11, fontWeight: 700
-              }}>
-                {status.label}
-              </span>
-              <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 600 }}>
-                {isSugar ? "Blood Glucose" : "Blood Pressure"}
-              </span>
-            </div>
-
-            {/* Linked Patient */}
-            {patient && (
-              <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 11, color: "#9CA3AF" }}>Patient:</span>
-                <Link
-                  href={`/patients/${patient.id}`}
-                  style={{
-                    fontSize: 12, fontWeight: 700, color: "#0D9488",
-                    textDecoration: "none", background: "#F0FDFA", padding: "1px 7px", borderRadius: 4
-                  }}
-                >
-                  👤 {patient.name} {patient.age ? `(${patient.age} yrs)` : ""}
-                </Link>
-                <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-                  • {new Date(v.measuredAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={onDelete}
-            title="Delete reading"
-            style={{
-              width: 28, height: 28, borderRadius: 7, border: "1px solid #FEE2E2",
-              background: "#FFF5F5", cursor: "pointer", display: "flex", alignItems: "center",
-              justifyContent: "center", flexShrink: 0, marginLeft: 8, transition: "all 0.15s"
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-          </button>
-        </div>
-
-        {v.notes && (
-          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6B7280", lineHeight: 1.5 }}>
-            &ldquo;{v.notes}&rdquo;
-          </p>
-        )}
+        <Link href={`/patients/${p.id}`} style={{
+          fontSize: 12, fontWeight: 700, color: "#0D9488", textDecoration: "none"
+        }}>
+          View Details →
+        </Link>
       </div>
     </div>
   );
