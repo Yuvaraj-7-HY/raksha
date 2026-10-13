@@ -64,6 +64,8 @@ export async function POST(req: Request) {
   const speechResult = (params.SpeechResult ?? "").trim();
   const confidence = params.Confidence ? parseFloat(params.Confidence) : 1;
 
+  console.log(`[twilio/turn] callId=${callId} speechResult="${speechResult}" confidence=${confidence}`);
+
   if (!callId) {
     console.error("[twilio/turn] Missing callId");
     const vr = new VoiceResponse(); vr.say("Configuration error. Goodbye."); vr.hangup();
@@ -79,6 +81,15 @@ export async function POST(req: Request) {
 
   // No speech detected
   if (!speechResult) {
+    console.log("[twilio/turn] Empty speechResult, redirecting to noinput");
+    const vr = new VoiceResponse();
+    vr.redirect({ method: "POST" }, `${PUBLIC_BASE_URL}/api/twilio/noinput?callId=${callId}`);
+    return new Response(vr.toString(), { headers: { "Content-Type": "text/xml" } });
+  }
+
+  // Low confidence - treat as no input
+  if (confidence < 0.3) {
+    console.log(`[twilio/turn] Low confidence (${confidence}), treating as no input`);
     const vr = new VoiceResponse();
     vr.redirect({ method: "POST" }, `${PUBLIC_BASE_URL}/api/twilio/noinput?callId=${callId}`);
     return new Response(vr.toString(), { headers: { "Content-Type": "text/xml" } });
