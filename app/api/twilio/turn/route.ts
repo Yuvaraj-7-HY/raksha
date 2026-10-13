@@ -104,6 +104,8 @@ export async function POST(req: Request) {
   // Call n8n W1 for next turn
   const { reply, end_call, emergency, llm_ok } = await callN8nTurn(callId, call.call_type, call.context, history, speechResult, call.turn_index);
 
+  console.log(`[twilio/turn] n8n response: reply="${reply}" end_call=${end_call} emergency=${emergency} llm_ok=${llm_ok}`);
+
   // Save AI reply to history
   appendHistory(callId, { role: "ai", text: reply, ts: Date.now() });
   setReplySource(callId, llm_ok ? "n8n" : "fallback");

@@ -94,6 +94,8 @@ export async function POST(req: Request) {
   // Get greeting from n8n (turn 0)
   const { reply, end_call, emergency } = await callN8nTurn0(callId, call.call_type, call.context);
 
+  console.log(`[twilio/voice] n8n greeting: reply="${reply}" end_call=${end_call} emergency=${emergency}`);
+
   // Save greeting to history
   appendHistory(callId, { role: "ai", text: reply, ts: Date.now() });
   if (emergency) {
