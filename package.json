@@ -3,15 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently -n next,worker -c cyan,yellow \"next dev\" \"tsx worker/dispatcher.ts\"",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "tsx scripts/seed.ts",
+    "worker": "tsx worker/dispatcher.ts",
+    "test:telegram": "tsx scripts/test-telegram.ts"
   },
   "dependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/uuid": "^10.0.0",
+    "better-sqlite3": "^13.0.3",
+    "concurrently": "^10.0.6",
     "next": "16.3.8",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "tsx": "^4.23.15",
+    "uuid": "^14.0.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
