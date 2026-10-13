@@ -113,10 +113,11 @@ export async function POST(req: Request) {
       action: `${PUBLIC_BASE_URL}/api/twilio/turn?callId=${callId}`,
       method: "POST",
       speechTimeout: "auto",
-      language: "en-IN",
+      language: "en-US",  // More reliable than en-IN for trial accounts
       enhanced: true,
-      hints: "yes,no,okay,good,bad,fine,pain,hurt,medicine,tablet,morning,evening,took,taken,did not,didn't",
-      speechModel: "experimental_conversations",
+      hints: "yes,no,okay,good,bad,fine,pain,hurt,medicine,tablet,morning,evening,took,taken,did not,didn't,hello,hi,bye,feeling,feel,took,not,none",
+      // speechModel: "experimental_conversations",  // Disabled - can be unstable
+      profanityFilter: false,
     });
     gather.say(reply);
     vr.redirect({ method: "POST" }, `${PUBLIC_BASE_URL}/api/twilio/noinput?callId=${callId}`);
