@@ -18,6 +18,8 @@ export const EMERGENCY_CHAT_ID =
 export const N8N_ALERT_URL =
   process.env.N8N_ALERT_URL ??
   "http://localhost:5678/webhook-test/care-alert";
+export const N8N_BASE_URL = process.env.N8N_BASE_URL ?? "http://localhost:5678";
+export const N8N_WEBHOOK_PREFIX = process.env.N8N_WEBHOOK_PREFIX ?? "webhook";
 export const CARE_SHARED_SECRET =
   process.env.CARE_SHARED_SECRET ?? "change-me";
 
@@ -58,6 +60,16 @@ export const STALE_RING_SECONDS = Number(
 
 // ── Database ──────────────────────────────────────────────────────────────────
 export const DB_PATH = path.join(process.cwd(), "data", "raksha.db");
+
+// ── Twilio / Transport ────────────────────────────────────────────────────────
+export const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID ?? "";
+export const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN ?? "";
+export const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER ?? "";
+export const ALLOWED_TO_NUMBERS = process.env.ALLOWED_TO_NUMBERS ?? "";
+export const DEFAULT_TO_NUMBER = process.env.DEFAULT_TO_NUMBER ?? "";
+export const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL ?? "";
+export const TRANSPORT = (process.env.TRANSPORT ?? "twilio") as "twilio" | "web";
+export const TWILIO_VALIDATE = process.env.TWILIO_VALIDATE !== "false";
 
 // ── Emergency keywords (case-insensitive substring match) ────────────────────
 export const EMERGENCY_KEYWORDS: string[] = [
