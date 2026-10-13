@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { lookupBarcode } from "@/lib/medicineDatabase";
 
 type ScanState = "requesting" | "active" | "found" | "notfound" | "denied";
 
-export default function BarcodeScannerPage() {
+function BarcodeScannerContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const patientId = searchParams.get("patientId") ?? "";
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scannerRef = useRef<unknown>(null);
@@ -28,12 +31,20 @@ export default function BarcodeScannerPage() {
     stopCamera();
     if (!med) return;
     const p = new URLSearchParams({
-      name: med.name, dosage: med.dosage,
-      frequency: med.frequency, instructions: med.instructions,
+      name: med.name,
+      dosage: med.dosage,
       from: "barcode",
     });
-    router.replace("/medicines/add?" + p.toString());
-  }, [router, stopCamera]);
+    if (patientId) p.set("patientId", patientId);
+    router.replace("/patients/add-medication?" + p.toString());
+  }, [router, stopCamera, patientId]);
+
+  const goManual = useCallback(() => {
+    stopCamera();
+    const p = new URLSearchParams();
+    if (patientId) p.set("patientId", patientId);
+    router.push(p.toString() ? "/patients/add-medication?" + p.toString() : "/patients/add-medication");
+  }, [router, stopCamera, patientId]);
 
   useEffect(() => {
     let active = true;
@@ -178,8 +189,8 @@ export default function BarcodeScannerPage() {
               <p style={{ margin:"0 0 8px",fontSize:13,color:"#718096" }}>This code is not in our database.</p>
               {notFoundCode && <code style={{ fontSize:11,color:"#a0aabf",background:"#f5f7fa",padding:"3px 8px",borderRadius:6 }}>{notFoundCode}</code>}
             </div>
-            <button onClick={()=>{ stopCamera(); router.push("/medicines/add"); }}
-              style={{ width:"100%",padding:15,borderRadius:12,border:"none",background:"#E31837",color:"#fff",fontSize:16,fontWeight:700,cursor:"pointer",marginTop:8 }}>
+            <button onClick={goManual}
+              style={{ width:"100%",padding:15,borderRadius:12,border:"none",background:"#0D9488",color:"#fff",fontSize:16,fontWeight:700,cursor:"pointer",marginTop:8 }}>
               Enter Manually
             </button>
             <button onClick={()=>{ detectedRef.current=false; setScanState("active"); }}
@@ -202,12 +213,20 @@ export default function BarcodeScannerPage() {
       {/* Bottom manual entry button */}
       {scanState === "active" && (
         <div style={{ position:"absolute",bottom:0,left:0,right:0,padding:"0 32px 44px" }}>
-          <button onClick={()=>{ stopCamera(); router.push("/medicines/add"); }}
+          <button onClick={goManual}
             style={{ width:"100%",padding:15,borderRadius:12,border:"1px solid rgba(255,255,255,0.3)",background:"rgba(0,0,0,0.3)",color:"#fff",fontSize:15,fontWeight:600,cursor:"pointer",backdropFilter:"blur(8px)" }}>
             Enter manually instead
           </button>
         </div>
       )}
     </div>
+  );
+}
+
+export default function BarcodeScannerPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#000" }} />}>
+      <BarcodeScannerContent />
+    </Suspense>
   );
 }

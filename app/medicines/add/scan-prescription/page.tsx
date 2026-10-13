@@ -1,13 +1,16 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { parseOcrText } from "@/lib/medicineDatabase";
 
 type Phase = "idle" | "scanning" | "success";
 
-export default function PrescriptionScannerPage() {
+function PrescriptionScannerContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const patientId = searchParams.get("patientId") ?? "";
+
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -33,12 +36,15 @@ export default function PrescriptionScannerPage() {
     await new Promise<void>(r => setTimeout(r, 1500));
 
     const p = new URLSearchParams({
-      name: result.name, dosage: result.dosage,
-      frequency: result.frequency, instructions: result.instructions,
+      name: result.name,
+      dosage: result.dosage,
+      schedule: result.frequency,
+      notes: result.instructions,
       from: "prescription",
     });
-    router.replace("/medicines/add?" + p.toString());
-  }, [router]);
+    if (patientId) p.set("patientId", patientId);
+    router.replace("/patients/add-medication?" + p.toString());
+  }, [router, patientId]);
 
   const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -161,3 +167,12 @@ export default function PrescriptionScannerPage() {
     </div>
   );
 }
+
+export default function PrescriptionScannerPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#F5F7FA" }} />}>
+      <PrescriptionScannerContent />
+    </Suspense>
+  );
+}
+

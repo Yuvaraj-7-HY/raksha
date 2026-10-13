@@ -196,27 +196,19 @@ export default function DashboardPage() {
             Phone
           </a>
           <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase", padding: "12px 14px 8px" }}>Care</p>
-          <a href="#" className="sidebar-item">
+          <a href="/patients" className="sidebar-item">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             Patients
           </a>
-          <a href="#" className="sidebar-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <a href="/patients?tab=vitals" className="sidebar-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Vitals
+          </a>
+          <a href="/patients?tab=medications" className="sidebar-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             Medications
           </a>
-          <a href="#" className="sidebar-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Appointments
-          </a>
-          <a href="#" className="sidebar-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            Care Alerts
-          </a>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase", padding: "12px 14px 8px" }}>System</p>
-          <a href="#" className="sidebar-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07"/></svg>
-            Settings
-          </a>
+
         </nav>
 
         {/* Realtime indicator */}
@@ -557,6 +549,93 @@ export default function DashboardPage() {
                   {message}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* ── Medication Management Card ─────────────────────────────────────── */}
+          <div className="hc-card" style={{ padding: 24, marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--navy-soft)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>Medication Management</h2>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-secondary)" }}>Add and track {state?.patientName ?? "patient"}&apos;s medicines</p>
+                </div>
+              </div>
+              <a href="/patients?tab=medications" style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 8,
+                border: "1px solid var(--border)", background: "var(--surface-2)",
+                color: "var(--text-secondary)", textDecoration: "none", fontSize: 12, fontWeight: 500,
+              }}>View All Meds</a>
+            </div>
+
+            {/* Primary CTA */}
+            <a
+              href="/patients/add-medication"
+              style={{
+                display: "flex", alignItems: "center", gap: 16,
+                padding: "18px 20px", borderRadius: 14,
+                background: "linear-gradient(135deg, #0D9488 0%, #0a7a70 100%)",
+                color: "#fff", textDecoration: "none", marginBottom: 12,
+                boxShadow: "0 6px 20px rgba(13,148,136,0.28)",
+              }}
+            >
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 700 }}>Add Medication</p>
+                <p style={{ margin: 0, fontSize: 12, opacity: 0.82 }}>Scan barcode, prescription, or enter manually</p>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+
+            {/* Quick action row */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+              <a href="/patients" style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                borderRadius: 12, border: "1.5px solid var(--border)", background: "var(--surface-2)",
+                color: "var(--text-primary)", textDecoration: "none",
+              }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: "#CCFBF1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>Patients</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-secondary)" }}>Manage patient list</p>
+                </div>
+              </a>
+              <a href="/patients?tab=vitals" style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                borderRadius: 12, border: "1.5px solid var(--border)", background: "var(--surface-2)",
+                color: "var(--text-primary)", textDecoration: "none",
+              }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>Vitals Log</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-secondary)" }}>Sugar & BP tracking</p>
+                </div>
+              </a>
+              <a href="/patients?tab=medications" style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                borderRadius: 12, border: "1.5px solid var(--border)", background: "var(--surface-2)",
+                color: "var(--text-primary)", textDecoration: "none",
+              }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>Medications</p>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-secondary)" }}>All prescriptions</p>
+                </div>
+              </a>
             </div>
           </div>
 
