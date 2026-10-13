@@ -58,7 +58,7 @@ export const STALE_RING_SECONDS = Number(
   process.env.STALE_RING_SECONDS ?? 60
 );
 
-// ── Twilio ────────────────────────────────────────────────────────────────────
+// ── Twilio / Transport ────────────────────────────────────────────────────────
 export const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID ?? "";
 export const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN ?? "";
 export const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER ?? "";
@@ -67,19 +67,15 @@ export const TWILIO_MESSAGING_SERVICE_SID =
 /** Base URL for Twilio voice webhooks. Set to your ngrok/prod URL. */
 export const TWILIO_WEBHOOK_BASE_URL =
   process.env.TWILIO_WEBHOOK_BASE_URL ?? "";
-
-// ── Database ──────────────────────────────────────────────────────────────────
-export const DB_PATH = path.join(process.cwd(), "data", "raksha.db");
-
-// ── Twilio / Transport ────────────────────────────────────────────────────────
-export const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID ?? "";
-export const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN ?? "";
 export const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER ?? "";
 export const ALLOWED_TO_NUMBERS = process.env.ALLOWED_TO_NUMBERS ?? "";
 export const DEFAULT_TO_NUMBER = process.env.DEFAULT_TO_NUMBER ?? "";
 export const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL ?? "";
 export const TRANSPORT = (process.env.TRANSPORT ?? "twilio") as "twilio" | "web";
 export const TWILIO_VALIDATE = process.env.TWILIO_VALIDATE !== "false";
+
+// ── Database ──────────────────────────────────────────────────────────────────
+export const DB_PATH = path.join(process.cwd(), "data", "raksha.db");
 
 // ── Emergency keywords (case-insensitive substring match) ────────────────────
 export const EMERGENCY_KEYWORDS: string[] = [

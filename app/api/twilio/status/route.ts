@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 import { twilioClient, TWILIO_FROM_NUMBER, validateTwilioSignature } from "@/lib/twilio";
 import { getCall, markFinalized, setCallEnded, setResult, parseHistory } from "@/lib/calls-db";
-import { upsertTimeline, type TimelineInsert, insertCallAttempt, insertEscalation, getPatientIdByPhone, type CallAttemptInsert, type EscalationInsert } from "@/lib/supabase";
+import { upsertTimeline, type TimelineInsert, insertCallAttempt, insertEscalation, getPatientIdByPhone, type CallAttemptInsert, type EscalationInsert } from "@/lib/supabase-server";
 import { PUBLIC_BASE_URL, TWILIO_AUTH_TOKEN, TWILIO_VALIDATE, N8N_BASE_URL, N8N_WEBHOOK_PREFIX, CARE_SHARED_SECRET } from "@/lib/config";
 
 const TERMINAL_STATUSES = ["completed", "busy", "failed", "no-answer", "canceled"];
@@ -207,7 +207,7 @@ export async function POST(req: Request) {
           concern_level: result && typeof result === "object" && "concern_level" in result ? (result as any).concern_level : null,
           emergency: result && typeof result === "object" && "emergency" in result ? (result as any).emergency : null,
         };
-        insertCallAttempt(attemptRow).catch(e => console.error("[twilio/status] call_attempts insert failed:", e));
+        insertCallAttempt(attemptRow).catch((e: Error) => console.error("[twilio/status] call_attempts insert failed:", e));
 
         // If emergency or high concern, create escalation
         const concernLevel = result && typeof result === "object" && "concern_level" in result ? (result as any).concern_level : 1;
@@ -222,12 +222,12 @@ export async function POST(req: Request) {
             acknowledged: false,
             acknowledged_at: null,
           };
-          insertEscalation(escalationRow).catch(e => console.error("[twilio/status] escalations insert failed:", e));
+          insertEscalation(escalationRow).catch((e: Error) => console.error("[twilio/status] escalations insert failed:", e));
         }
       }
 
       // Sync timeline to Supabase (non-blocking)
-      upsertTimeline(timelineRow).catch(e => console.error("[twilio/status] Supabase sync failed:", e));
+      upsertTimeline(timelineRow).catch((e: Error) => console.error("[twilio/status] Supabase sync failed:", e));
     }
   }
 
