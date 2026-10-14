@@ -373,7 +373,7 @@ export async function getConditionAlerts(opts?: {
     const supabase = db.get();
     let query = supabase
       .from("condition_alerts")
-      .select("*, patients(name, phone)")
+      .select("*")
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -383,11 +383,7 @@ export async function getConditionAlerts(opts?: {
 
     const { data, error } = await query;
     if (!error && data) {
-      return data.map((a: any) => ({
-        ...a,
-        patient_name: a.patients?.name,
-        patient_phone: a.patients?.phone,
-      })) as ConditionAlert[];
+      return data as ConditionAlert[];
     }
   } catch (err) {
     // Fall through
@@ -396,9 +392,8 @@ export async function getConditionAlerts(opts?: {
   initSqliteConditionTables();
   const sqlite = getDb();
   let sql = `
-    SELECT ca.*, p.name as patient_name, p.phone as patient_phone
+    SELECT ca.*
     FROM condition_alerts ca
-    LEFT JOIN (SELECT id, name, phone FROM patient) p ON ca.patient_id = CAST(p.id AS TEXT)
     WHERE 1=1
   `;
   const params: any[] = [];

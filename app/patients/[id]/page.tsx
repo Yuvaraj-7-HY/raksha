@@ -12,6 +12,7 @@ import { DementiaTab } from "./components/DementiaTab";
 import { DepressionTab } from "./components/DepressionTab";
 import { AlertsTab } from "./components/AlertsTab";
 import { ConditionSetupModal } from "./components/ConditionSetupModal";
+import { PrescriptionCalendar } from "./components/PrescriptionCalendar";
 import {
   SendSmsModal,
   CallCaregiverModal,
@@ -29,8 +30,17 @@ export default function PatientDetailPage() {
   const [alerts, setAlerts] = useState<ConditionAlert[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Active tab state: defaults to 'overview'
-  const [activeTab, setActiveTab] = useState<string>("overview");
+  // Active tab state: defaults to 'calendar' so prescription dates calendar is immediately shown
+  const [activeTab, setActiveTab] = useState<string>("calendar");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("tab");
+      if (q) {
+        setActiveTab(q);
+      }
+    }
+  }, []);
 
   // Modals state
   const [showConditionSetup, setShowConditionSetup] = useState(false);
@@ -64,7 +74,7 @@ export default function PatientDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#F8FAFC", padding: 40, textAlign: "center", color: "#64748B" }}>
+      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #BAE6FD 0%, #D4EEFD 40%, #C3E5FC 100%)", padding: 40, textAlign: "center", color: "#083457", fontWeight: 700, fontFamily: "Inter,ui-sans-serif,system-ui,sans-serif" }}>
         Loading patient profile...
       </div>
     );
@@ -72,9 +82,9 @@ export default function PatientDetailPage() {
 
   if (!patient) {
     return (
-      <div style={{ minHeight: "100vh", background: "#F8FAFC", padding: 40, textAlign: "center" }}>
-        <p style={{ fontSize: 18, fontWeight: 700, color: "#0F172A" }}>Patient not found</p>
-        <Link href="/patients" style={{ color: "#0D9488", fontWeight: 700, textDecoration: "none" }}>
+      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #BAE6FD 0%, #D4EEFD 40%, #C3E5FC 100%)", color: "#083457", padding: 40, textAlign: "center", fontFamily: "Inter,ui-sans-serif,system-ui,sans-serif" }}>
+        <p style={{ fontSize: 18, fontWeight: 800, color: "#083457", marginBottom: 12 }}>Patient not found</p>
+        <Link href="/patients" style={{ color: "#0C85D0", fontWeight: 700, textDecoration: "none" }}>
           ← Back to Patients List
         </Link>
       </div>
@@ -86,7 +96,7 @@ export default function PatientDetailPage() {
   const openAlertsCount = alerts.filter((a) => a.status === "open").length;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "Inter,ui-sans-serif,system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #BAE6FD 0%, #D4EEFD 40%, #C3E5FC 100%)", color: "#083457", fontFamily: "Inter,ui-sans-serif,system-ui,sans-serif" }}>
       {/* Toast */}
       {toast && (
         <div style={{
@@ -94,13 +104,13 @@ export default function PatientDetailPage() {
           bottom: 28,
           right: 28,
           zIndex: 99999,
-          background: "#111827",
+          background: "linear-gradient(135deg, #1DA1F2 0%, #0C85D0 100%)",
           color: "#fff",
           padding: "12px 20px",
           borderRadius: 12,
           fontSize: 13,
-          fontWeight: 600,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+          fontWeight: 700,
+          boxShadow: "0 8px 24px rgba(12, 133, 208, 0.35)",
         }}>
           ✓ {toast}
         </div>
@@ -108,22 +118,23 @@ export default function PatientDetailPage() {
 
       {/* Top Breadcrumb & Actions Bar */}
       <div style={{
-        background: "#fff",
-        borderBottom: "1px solid #E2E8F0",
+        background: "linear-gradient(135deg, #1DA1F2 0%, #0C85D0 100%)",
+        borderBottom: "2px solid #0A72B3",
         padding: "0 32px",
         height: 56,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        boxShadow: "0 4px 16px rgba(12, 133, 208, 0.25)",
       }}>
         <Link href="/patients" style={{
           display: "inline-flex",
           alignItems: "center",
           gap: 6,
-          color: "#475569",
+          color: "#FFFFFF",
           textDecoration: "none",
           fontSize: 13,
-          fontWeight: 600,
+          fontWeight: 700,
         }}>
           ← Back to Care Hub
         </Link>
@@ -134,11 +145,11 @@ export default function PatientDetailPage() {
             style={{
               padding: "7px 14px",
               borderRadius: 8,
-              border: "1px solid #CBD5E1",
-              background: "#fff",
-              color: "#334155",
+              border: "1px solid rgba(255,255,255,0.4)",
+              background: "rgba(8, 52, 87, 0.35)",
+              color: "#FFFFFF",
               fontSize: 13,
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: "pointer",
             }}
           >
@@ -149,11 +160,11 @@ export default function PatientDetailPage() {
             style={{
               padding: "7px 14px",
               borderRadius: 8,
-              border: "1px solid #CBD5E1",
-              background: "#fff",
-              color: "#334155",
+              border: "1px solid rgba(255,255,255,0.4)",
+              background: "rgba(8, 52, 87, 0.35)",
+              color: "#FFFFFF",
               fontSize: 13,
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: "pointer",
             }}
           >
@@ -164,13 +175,13 @@ export default function PatientDetailPage() {
             style={{
               padding: "7px 16px",
               borderRadius: 8,
-              background: "#0D9488",
-              color: "#fff",
-              border: "none",
+              background: "#083457",
+              color: "#FFFFFF",
+              border: "1px solid #0C4A7A",
               fontSize: 13,
               fontWeight: 700,
               cursor: "pointer",
-              boxShadow: "0 2px 6px rgba(13,148,136,0.25)",
+              boxShadow: "0 2px 10px rgba(8, 52, 87, 0.3)",
             }}
           >
             ⚙️ Condition Setup
@@ -180,14 +191,14 @@ export default function PatientDetailPage() {
 
       {/* Patient Header Banner */}
       <div style={{
-        background: "#fff",
-        borderBottom: "1px solid #E2E8F0",
+        background: "#EDF7FE",
+        borderBottom: "1.5px solid #7DD3FC",
         padding: "24px 32px",
       }}>
         <div style={{ maxWidth: 1240, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#0F172A", letterSpacing: "-0.02em" }}>
+              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#083457", letterSpacing: "-0.02em" }}>
                 {patient.name}
               </h1>
               <span style={{
@@ -195,8 +206,23 @@ export default function PatientDetailPage() {
                 fontWeight: 700,
                 padding: "3px 10px",
                 borderRadius: 999,
-                background: patient.recheck_pending ? "#FFFBEB" : patient.last_contact_status === "yes" ? "#F0FDF4" : "#F1F5F9",
-                color: patient.recheck_pending ? "#D97706" : patient.last_contact_status === "yes" ? "#16A34A" : "#64748B",
+                background: patient.recheck_pending
+                  ? "#FEF08A"
+                  : patient.last_contact_status === "yes"
+                  ? "#BAE6FD"
+                  : "#E0F2FE",
+                color: patient.recheck_pending
+                  ? "#854D0E"
+                  : patient.last_contact_status === "yes"
+                  ? "#083457"
+                  : "#12578A",
+                border: `1px solid ${
+                  patient.recheck_pending
+                    ? "#FDE047"
+                    : patient.last_contact_status === "yes"
+                    ? "#7DD3FC"
+                    : "#BAE6FD"
+                }`,
               }}>
                 {patient.recheck_pending ? "Re-check Pending" : patient.last_contact_status === "yes" ? "Adherent" : "Standby"}
               </span>
@@ -205,62 +231,72 @@ export default function PatientDetailPage() {
             {/* Condition chips */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
               {activeConditionTypes.length > 0 ? (
-                activeConditionTypes.map((cType) => (
-                  <span
-                    key={cType}
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      padding: "3px 10px",
-                      borderRadius: 6,
-                      background: cType === "diabetes" ? "#CCFBF1" : cType === "hypertension" ? "#FFE4E6" : cType === "dementia" ? "#FEF3C7" : "#EDE9FE",
-                      color: cType === "diabetes" ? "#0F766E" : cType === "hypertension" ? "#BE123C" : cType === "dementia" ? "#B45309" : "#6D28D9",
-                      textTransform: "capitalize",
-                    }}
-                  >
-                    {cType}
-                  </span>
-                ))
+                activeConditionTypes.map((cType) => {
+                  const styleMap: Record<string, { bg: string; color: string; border: string }> = {
+                    diabetes: { bg: "#BAE6FD", color: "#083457", border: "#7DD3FC" },
+                    hypertension: { bg: "#FED7AA", color: "#9A3412", border: "#FDBA74" },
+                    dementia: { bg: "#FEF08A", color: "#854D0E", border: "#FDE047" },
+                    depression: { bg: "#DDD6FE", color: "#5B21B6", border: "#C4B5FD" },
+                  };
+                  const s = styleMap[cType] || { bg: "#E0F2FE", color: "#083457", border: "#7DD3FC" };
+                  return (
+                    <span
+                      key={cType}
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        padding: "4px 10px",
+                        borderRadius: 6,
+                        background: s.bg,
+                        color: s.color,
+                        border: `1px solid ${s.border}`,
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {cType}
+                    </span>
+                  );
+                })
               ) : (
-                <span style={{ fontSize: 13, color: "#94A3B8" }}>No conditions assigned yet</span>
+                <span style={{ fontSize: 13, color: "#12578A" }}>No conditions assigned yet</span>
               )}
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 13, color: "#64748B" }}>
-              <span>📞 Patient: <strong>{patient.phone}</strong></span>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 13, color: "#12578A" }}>
+              <span>📞 Patient: <strong style={{ color: "#083457" }}>{patient.phone}</strong></span>
               {patient.family_phone && <span>•</span>}
-              {patient.family_phone && <span>Family/Caregiver: <strong>{patient.family_phone}</strong></span>}
+              {patient.family_phone && <span>Family/Caregiver: <strong style={{ color: "#083457" }}>{patient.family_phone}</strong></span>}
             </div>
           </div>
 
           {/* Quick Metrics */}
           <div style={{ display: "flex", gap: 16 }}>
             <div style={{
-              background: "#F8FAFC",
-              border: "1px solid #E2E8F0",
+              background: "#E0F2FE",
+              border: "1.5px solid #7DD3FC",
               borderRadius: 12,
               padding: "12px 18px",
               textAlign: "center",
             }}>
-              <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
+              <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: "#12578A", textTransform: "uppercase" }}>
                 Active Conditions
               </p>
-              <span style={{ fontSize: 20, fontWeight: 800, color: "#0F172A" }}>
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#083457" }}>
                 {activeConditionTypes.length}
               </span>
             </div>
 
             <div style={{
-              background: openAlertsCount > 0 ? "#FEF2F2" : "#F0FDF4",
-              border: `1px solid ${openAlertsCount > 0 ? "#FCA5A5" : "#BBF7D0"}`,
+              background: openAlertsCount > 0 ? "#FEE2E2" : "#E0F2FE",
+              border: `1.5px solid ${openAlertsCount > 0 ? "#FCA5A5" : "#7DD3FC"}`,
               borderRadius: 12,
               padding: "12px 18px",
               textAlign: "center",
             }}>
-              <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: openAlertsCount > 0 ? "#991B1B" : "#166534", textTransform: "uppercase" }}>
+              <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 700, color: openAlertsCount > 0 ? "#B91C1C" : "#083457", textTransform: "uppercase" }}>
                 Open Alerts
               </p>
-              <span style={{ fontSize: 20, fontWeight: 800, color: openAlertsCount > 0 ? "#DC2626" : "#16A34A" }}>
+              <span style={{ fontSize: 20, fontWeight: 800, color: openAlertsCount > 0 ? "#B91C1C" : "#083457" }}>
                 {openAlertsCount}
               </span>
             </div>
@@ -268,22 +304,45 @@ export default function PatientDetailPage() {
         </div>
 
         {/* Dynamic Profile Tabs */}
-        <div style={{ maxWidth: 1240, margin: "20px auto 0", display: "flex", gap: 8, borderBottom: "1px solid #E2E8F0", paddingBottom: 0, overflowX: "auto" }}>
+        <div style={{ maxWidth: 1240, margin: "20px auto 0", display: "flex", gap: 8, borderBottom: "1.5px solid #7DD3FC", paddingBottom: 0, overflowX: "auto" }}>
+          {/* Calendar Tab */}
+          <button
+            onClick={() => setActiveTab("calendar")}
+            style={{
+              padding: "10px 18px",
+              border: "none",
+              borderBottom: activeTab === "calendar" ? "3px solid #1DA1F2" : "3px solid transparent",
+              background: activeTab === "calendar" ? "#D8EEFD" : "transparent",
+              color: activeTab === "calendar" ? "#083457" : "#12578A",
+              fontSize: 14,
+              fontWeight: activeTab === "calendar" ? 800 : 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              borderRadius: "8px 8px 0 0",
+            }}
+          >
+            <span>📅</span>
+            <span>Prescription Calendar</span>
+          </button>
+
           {/* Overview Tab */}
           <button
             onClick={() => setActiveTab("overview")}
             style={{
               padding: "10px 16px",
               border: "none",
-              borderBottom: activeTab === "overview" ? "3px solid #0D9488" : "3px solid transparent",
-              background: "transparent",
-              color: activeTab === "overview" ? "#0D9488" : "#64748B",
+              borderBottom: activeTab === "overview" ? "3px solid #1DA1F2" : "3px solid transparent",
+              background: activeTab === "overview" ? "#D8EEFD" : "transparent",
+              color: activeTab === "overview" ? "#083457" : "#12578A",
               fontSize: 14,
-              fontWeight: activeTab === "overview" ? 700 : 500,
+              fontWeight: activeTab === "overview" ? 800 : 600,
               cursor: "pointer",
+              borderRadius: "8px 8px 0 0",
             }}
           >
-            📋 Overview
+            📋 Clinical Overview
           </button>
 
           {/* Module-Switched Condition Tabs: One tab per active condition only! */}
@@ -293,11 +352,11 @@ export default function PatientDetailPage() {
               style={{
                 padding: "10px 16px",
                 border: "none",
-                borderBottom: activeTab === "diabetes" ? "3px solid #0D9488" : "3px solid transparent",
+                borderBottom: activeTab === "diabetes" ? "3px solid #1DA1F2" : "3px solid transparent",
                 background: "transparent",
-                color: activeTab === "diabetes" ? "#0D9488" : "#64748B",
+                color: activeTab === "diabetes" ? "#083457" : "#12578A",
                 fontSize: 14,
-                fontWeight: activeTab === "diabetes" ? 700 : 500,
+                fontWeight: activeTab === "diabetes" ? 800 : 600,
                 cursor: "pointer",
               }}
             >
@@ -311,11 +370,11 @@ export default function PatientDetailPage() {
               style={{
                 padding: "10px 16px",
                 border: "none",
-                borderBottom: activeTab === "hypertension" ? "3px solid #0D9488" : "3px solid transparent",
+                borderBottom: activeTab === "hypertension" ? "3px solid #1DA1F2" : "3px solid transparent",
                 background: "transparent",
-                color: activeTab === "hypertension" ? "#0D9488" : "#64748B",
+                color: activeTab === "hypertension" ? "#083457" : "#12578A",
                 fontSize: 14,
-                fontWeight: activeTab === "hypertension" ? 700 : 500,
+                fontWeight: activeTab === "hypertension" ? 800 : 600,
                 cursor: "pointer",
               }}
             >
@@ -329,11 +388,11 @@ export default function PatientDetailPage() {
               style={{
                 padding: "10px 16px",
                 border: "none",
-                borderBottom: activeTab === "dementia" ? "3px solid #0D9488" : "3px solid transparent",
+                borderBottom: activeTab === "dementia" ? "3px solid #1DA1F2" : "3px solid transparent",
                 background: "transparent",
-                color: activeTab === "dementia" ? "#0D9488" : "#64748B",
+                color: activeTab === "dementia" ? "#083457" : "#12578A",
                 fontSize: 14,
-                fontWeight: activeTab === "dementia" ? 700 : 500,
+                fontWeight: activeTab === "dementia" ? 800 : 600,
                 cursor: "pointer",
               }}
             >
@@ -347,11 +406,11 @@ export default function PatientDetailPage() {
               style={{
                 padding: "10px 16px",
                 border: "none",
-                borderBottom: activeTab === "depression" ? "3px solid #0D9488" : "3px solid transparent",
+                borderBottom: activeTab === "depression" ? "3px solid #1DA1F2" : "3px solid transparent",
                 background: "transparent",
-                color: activeTab === "depression" ? "#0D9488" : "#64748B",
+                color: activeTab === "depression" ? "#083457" : "#12578A",
                 fontSize: 14,
-                fontWeight: activeTab === "depression" ? 700 : 500,
+                fontWeight: activeTab === "depression" ? 800 : 600,
                 cursor: "pointer",
               }}
             >
@@ -365,11 +424,11 @@ export default function PatientDetailPage() {
             style={{
               padding: "10px 16px",
               border: "none",
-              borderBottom: activeTab === "medicines" ? "3px solid #0D9488" : "3px solid transparent",
+              borderBottom: activeTab === "medicines" ? "3px solid #1DA1F2" : "3px solid transparent",
               background: "transparent",
-              color: activeTab === "medicines" ? "#0D9488" : "#64748B",
+              color: activeTab === "medicines" ? "#083457" : "#12578A",
               fontSize: 14,
-              fontWeight: activeTab === "medicines" ? 700 : 500,
+              fontWeight: activeTab === "medicines" ? 800 : 600,
               cursor: "pointer",
             }}
           >
@@ -382,11 +441,11 @@ export default function PatientDetailPage() {
             style={{
               padding: "10px 16px",
               border: "none",
-              borderBottom: activeTab === "calls" ? "3px solid #0D9488" : "3px solid transparent",
+              borderBottom: activeTab === "calls" ? "3px solid #1DA1F2" : "3px solid transparent",
               background: "transparent",
-              color: activeTab === "calls" ? "#0D9488" : "#64748B",
+              color: activeTab === "calls" ? "#083457" : "#12578A",
               fontSize: 14,
-              fontWeight: activeTab === "calls" ? 700 : 500,
+              fontWeight: activeTab === "calls" ? 800 : 600,
               cursor: "pointer",
             }}
           >
@@ -399,11 +458,11 @@ export default function PatientDetailPage() {
             style={{
               padding: "10px 16px",
               border: "none",
-              borderBottom: activeTab === "alerts" ? "3px solid #0D9488" : "3px solid transparent",
+              borderBottom: activeTab === "alerts" ? "3px solid #1DA1F2" : "3px solid transparent",
               background: "transparent",
-              color: activeTab === "alerts" ? "#0D9488" : "#64748B",
+              color: activeTab === "alerts" ? "#083457" : "#12578A",
               fontSize: 14,
-              fontWeight: activeTab === "alerts" ? 700 : 500,
+              fontWeight: activeTab === "alerts" ? 800 : 600,
               cursor: "pointer",
             }}
           >
@@ -414,13 +473,67 @@ export default function PatientDetailPage() {
 
       {/* Main Tab Content Body */}
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 32px" }}>
+        {/* Prescription Calendar Tab (Default) */}
+        {activeTab === "calendar" && (
+          <PrescriptionCalendar
+            patient={patient}
+            onEditMedications={() => setShowConditionSetup(true)}
+          />
+        )}
+
         {/* Overview Tab */}
         {activeTab === "overview" && (
-          <OverviewTimeline
-            patientId={id}
-            callAttempts={callAttempts}
-            alerts={alerts}
-          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Quick Calendar Jump Banner */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)",
+                border: "1.5px solid #7DD3FC",
+                borderRadius: 14,
+                padding: "16px 20px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 24 }}>📅</span>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#083457" }}>
+                    Active Prescription Schedule & Dates
+                  </h4>
+                  <p style={{ margin: "2px 0 0", fontSize: 13, color: "#12578A" }}>
+                    {patient.medications
+                      ? `${patient.medications.slice(0, 80)}...`
+                      : "Prescription dates and daily dose slots tracked by Raksha"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab("calendar")}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  background: "#083457",
+                  color: "#FFFFFF",
+                  border: "none",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                View Full Calendar →
+              </button>
+            </div>
+
+            <OverviewTimeline
+              patientId={id}
+              callAttempts={callAttempts}
+              alerts={alerts}
+            />
+          </div>
         )}
 
         {/* Diabetes Tab */}
@@ -465,65 +578,181 @@ export default function PatientDetailPage() {
 
         {/* Medicines Tab */}
         {activeTab === "medicines" && (
-          <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 16, padding: "24px" }}>
-            <h3 style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 700, color: "#0F172A" }}>
-              Prescribed Medications
-            </h3>
-            {patient.medications ? (
-              <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 12, padding: "16px 20px" }}>
-                <p style={{ margin: 0, fontSize: 14, color: "#334155", lineHeight: 1.6 }}>
-                  {patient.medications}
-                </p>
-              </div>
-            ) : (
-              <p style={{ color: "#94A3B8" }}>No specific medications logged in profile.</p>
-            )}
-          </div>
+          <PrescriptionCalendar
+            patient={patient}
+            onEditMedications={() => setShowConditionSetup(true)}
+          />
         )}
 
         {/* Call History Tab */}
         {activeTab === "calls" && (
-          <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 16, padding: "24px" }}>
-            <h3 style={{ margin: "0 0 16px", fontSize: 17, fontWeight: 700, color: "#0F172A" }}>
-              Outbound IVR Voice Check-in History
-            </h3>
+          <div style={{ background: "#EDF7FE", border: "1.5px solid #7DD3FC", borderRadius: 16, padding: "24px", boxShadow: "0 4px 20px rgba(12, 133, 208, 0.12)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 18, paddingBottom: 14, borderBottom: "1.5px solid #BAE6FD" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 20 }}>📞</span>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#083457" }}>
+                    Outbound Voice & IVR Check-in History
+                  </h3>
+                  <span style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    padding: "3px 8px",
+                    borderRadius: 6,
+                    background: "#BAE6FD",
+                    color: "#083457",
+                  }}>
+                    {callAttempts.length} Total
+                  </span>
+                </div>
+                <p style={{ margin: "4px 0 0 30px", fontSize: 13, color: "#12578A" }}>
+                  Live call records logged in Supabase and synchronized with the Caregiver Telegram bot.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <button
+                  onClick={() => {
+                    fetchPatientData();
+                    setToast("Call logs refreshed.");
+                    setTimeout(() => setToast(null), 2500);
+                  }}
+                  style={{
+                    padding: "7px 14px",
+                    borderRadius: 8,
+                    border: "1.5px solid #7DD3FC",
+                    background: "#E0F2FE",
+                    color: "#083457",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span>🔄</span> Refresh Logs
+                </button>
+                <button
+                  onClick={() => setShowCallModal(true)}
+                  style={{
+                    padding: "7px 16px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "linear-gradient(135deg, #1DA1F2 0%, #0C85D0 100%)",
+                    color: "#FFFFFF",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 10px rgba(12, 133, 208, 0.3)",
+                  }}
+                >
+                  📞 Call Caregiver Now
+                </button>
+              </div>
+            </div>
+
             {callAttempts.length === 0 ? (
-              <p style={{ color: "#94A3B8", textAlign: "center", padding: 32 }}>No voice call records yet.</p>
+              <div style={{ textAlign: "center", padding: "40px 20px", color: "#12578A" }}>
+                <span style={{ fontSize: 32, display: "block", marginBottom: 8 }}>📭</span>
+                <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px", color: "#083457" }}>No voice call records yet.</p>
+                <p style={{ fontSize: 13, margin: 0 }}>Initiate a call or run a medication check to view history here.</p>
+              </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {callAttempts.map((ca: any) => (
-                  <div
-                    key={ca.id}
-                    style={{
-                      border: "1px solid #E2E8F0",
-                      borderRadius: 10,
-                      padding: "12px 18px",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <div>
-                      <span style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        padding: "2px 8px",
-                        borderRadius: 6,
-                        background: ca.outcome === "completed" || ca.outcome === "yes" ? "#DCFCE7" : "#FEE2E2",
-                        color: ca.outcome === "completed" || ca.outcome === "yes" ? "#166534" : "#991B1B",
-                        marginRight: 10,
-                      }}>
-                        {ca.outcome.toUpperCase()}
-                      </span>
-                      <span style={{ fontSize: 13, color: "#475569" }}>
-                        Attempt #{ca.attempt_number || 1} {ca.is_recheck ? "(Re-check)" : ""}
-                      </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {callAttempts.map((ca: any) => {
+                  const isSuccess = ca.outcome === "completed" || ca.outcome === "yes";
+                  const isNo = ca.outcome === "no";
+                  const isFailed = ["no-answer", "busy", "failed", "canceled"].includes(ca.outcome);
+                  const outcomeBg = isSuccess ? "#BAE6FD" : isNo ? "#FEE2E2" : isFailed ? "#FEF08A" : "#E0F2FE";
+                  const outcomeColor = isSuccess ? "#083457" : isNo ? "#991B1B" : isFailed ? "#854D0E" : "#0C4A7A";
+                  const outcomeBorder = isSuccess ? "#7DD3FC" : isNo ? "#FCA5A5" : isFailed ? "#FDE047" : "#BAE6FD";
+                  const outcomeLabel = isSuccess
+                    ? "✓ Confirmed"
+                    : isNo
+                    ? "✕ Not Taken"
+                    : isFailed
+                    ? `⚠️ ${ca.outcome.toUpperCase()}`
+                    : `ℹ️ ${ca.outcome.toUpperCase()}`;
+
+                  return (
+                    <div
+                      key={ca.id}
+                      style={{
+                        border: "1.5px solid #BAE6FD",
+                        background: "#FFFFFF",
+                        borderRadius: 12,
+                        padding: "14px 18px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 12,
+                        boxShadow: "0 2px 8px rgba(12, 133, 208, 0.06)",
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                          <span style={{
+                            fontSize: 12,
+                            fontWeight: 800,
+                            padding: "3px 10px",
+                            borderRadius: 6,
+                            background: outcomeBg,
+                            color: outcomeColor,
+                            border: `1px solid ${outcomeBorder}`,
+                          }}>
+                            {outcomeLabel}
+                          </span>
+                          <span style={{ fontSize: 14, color: "#083457", fontWeight: 800 }}>
+                            Voice Attempt #{ca.attempt_number || 1}
+                          </span>
+                          {ca.is_recheck && (
+                            <span style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: "2px 6px",
+                              borderRadius: 4,
+                              background: "#FED7AA",
+                              color: "#C2410C",
+                              border: "1px solid #FDBA74",
+                            }}>
+                              Re-check
+                            </span>
+                          )}
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: "2px 6px",
+                            borderRadius: 4,
+                            background: "#F0F9FF",
+                            color: "#0369A1",
+                            border: "1px solid #BAE6FD",
+                          }}>
+                            Twilio Voice IVR 📞
+                          </span>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12, color: "#12578A" }}>
+                          {ca.twilio_call_sid && (
+                            <span>SID: <code style={{ background: "#E0F2FE", padding: "1px 4px", borderRadius: 4, fontSize: 11 }}>{ca.twilio_call_sid.slice(0, 18)}...</code></span>
+                          )}
+                          <span>•</span>
+                          <span style={{ color: "#0C85D0", fontWeight: 600 }}>🤖 Synced to Caregiver Telegram</span>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: "right" }}>
+                        <span style={{ fontSize: 12, color: "#083457", fontWeight: 700, display: "block" }}>
+                          {new Date(ca.created_at).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true })}
+                        </span>
+                        <span style={{ fontSize: 11, color: "#12578A", fontWeight: 500 }}>
+                          {new Date(ca.created_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
                     </div>
-                    <span style={{ fontSize: 12, color: "#94A3B8" }}>
-                      {new Date(ca.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -558,6 +787,7 @@ export default function PatientDetailPage() {
         onSuccess={(msg) => {
           setToast(msg || "SMS alert dispatched.");
           setTimeout(() => setToast(null), 3000);
+          fetchPatientData();
         }}
       />
 
@@ -573,6 +803,7 @@ export default function PatientDetailPage() {
         onSuccess={(msg) => {
           setToast(msg || "Call dispatched.");
           setTimeout(() => setToast(null), 3000);
+          fetchPatientData();
         }}
       />
     </div>

@@ -140,63 +140,63 @@ export function DiabetesTab({
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
         {/* 7-Day Average */}
         <div style={{
-          background: "#fff",
-          border: "1px solid #E5E7EB",
+          background: "#EDF7FE",
+          border: "1.5px solid #7DD3FC",
           borderRadius: 14,
           padding: "20px 24px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+          boxShadow: "0 4px 16px rgba(12, 133, 208, 0.1)"
         }}>
-          <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600, color: "#6B7280" }}>
+          <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 700, color: "#12578A" }}>
             7-Day Glucose Average
           </p>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontSize: 32, fontWeight: 800, color: avg7d && avg7d > 140 ? "#D97706" : "#0D9488" }}>
+            <span style={{ fontSize: 32, fontWeight: 800, color: avg7d && avg7d > 140 ? "#D97706" : "#083457" }}>
               {avg7d ?? "—"}
             </span>
-            <span style={{ fontSize: 14, color: "#9CA3AF", fontWeight: 600 }}>mg/dL</span>
+            <span style={{ fontSize: 14, color: "#12578A", fontWeight: 700 }}>mg/dL</span>
           </div>
-          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9CA3AF" }}>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#12578A" }}>
             {past7DaysReadings.length} readings past week
           </p>
         </div>
 
         {/* Latest HbA1c */}
         <div style={{
-          background: "#fff",
-          border: "1px solid #E5E7EB",
+          background: "#EDF7FE",
+          border: "1.5px solid #7DD3FC",
           borderRadius: 14,
           padding: "20px 24px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+          boxShadow: "0 4px 16px rgba(12, 133, 208, 0.1)"
         }}>
-          <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600, color: "#6B7280" }}>
+          <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 700, color: "#12578A" }}>
             Latest HbA1c
           </p>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontSize: 32, fontWeight: 800, color: latestHba1c && Number(latestHba1c.value) > 7 ? "#D97706" : "#0D9488" }}>
+            <span style={{ fontSize: 32, fontWeight: 800, color: latestHba1c && Number(latestHba1c.value) > 7 ? "#D97706" : "#083457" }}>
               {latestHba1c ? latestHba1c.value : "—"}
             </span>
-            <span style={{ fontSize: 14, color: "#9CA3AF", fontWeight: 600 }}>%</span>
+            <span style={{ fontSize: 14, color: "#12578A", fontWeight: 700 }}>%</span>
           </div>
-          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9CA3AF" }}>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#12578A" }}>
             {latestHba1c ? `Recorded ${formatIstDateTime(latestHba1c.recorded_at)}` : "No lab HbA1c recorded"}
           </p>
         </div>
 
         {/* Open Alerts */}
         <div style={{
-          background: openDiabetesAlerts.length > 0 ? "#FEF2F2" : "#F0FDF4",
-          border: `1px solid ${openDiabetesAlerts.length > 0 ? "#FCA5A5" : "#BBF7D0"}`,
+          background: openDiabetesAlerts.length > 0 ? "#FEE2E2" : "#E0F2FE",
+          border: `1.5px solid ${openDiabetesAlerts.length > 0 ? "#FCA5A5" : "#7DD3FC"}`,
           borderRadius: 14,
           padding: "20px 24px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+          boxShadow: "0 4px 16px rgba(12, 133, 208, 0.1)"
         }}>
-          <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600, color: openDiabetesAlerts.length > 0 ? "#991B1B" : "#166534" }}>
+          <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 700, color: openDiabetesAlerts.length > 0 ? "#991B1B" : "#083457" }}>
             Active Diabetes Alerts
           </p>
-          <span style={{ fontSize: 32, fontWeight: 800, color: openDiabetesAlerts.length > 0 ? "#DC2626" : "#16A34A" }}>
+          <span style={{ fontSize: 32, fontWeight: 800, color: openDiabetesAlerts.length > 0 ? "#DC2626" : "#083457" }}>
             {openDiabetesAlerts.length}
           </span>
-          <p style={{ margin: "6px 0 0", fontSize: 12, color: openDiabetesAlerts.length > 0 ? "#B91C1C" : "#15803D" }}>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: openDiabetesAlerts.length > 0 ? "#B91C1C" : "#12578A" }}>
             {openDiabetesAlerts.length > 0 ? openDiabetesAlerts[0].message : "All thresholds within target"}
           </p>
         </div>
@@ -206,43 +206,43 @@ export function DiabetesTab({
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, alignItems: "start" }}>
         {/* Trend Chart */}
         <div style={{
-          background: "#fff",
-          border: "1px solid #E5E7EB",
+          background: "#EDF7FE",
+          border: "1.5px solid #7DD3FC",
           borderRadius: 16,
           padding: "24px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+          boxShadow: "0 4px 20px rgba(12, 133, 208, 0.12)"
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#111827" }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#083457" }}>
                 Blood Glucose Trends (mg/dL)
               </h3>
-              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B7280" }}>
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#12578A" }}>
                 Target range: 70 - 130 mg/dL (fasting), &lt; 250 (urgent threshold)
               </p>
             </div>
-            <span style={{ fontSize: 12, background: "#CCFBF1", color: "#0F766E", padding: "4px 10px", borderRadius: 8, fontWeight: 600 }}>
+            <span style={{ fontSize: 12, background: "#BAE6FD", color: "#083457", padding: "4px 10px", borderRadius: 8, fontWeight: 700, border: "1px solid #7DD3FC" }}>
               {chartData.length} Readings
             </span>
           </div>
 
           {loading ? (
-            <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center", color: "#9CA3AF" }}>
+            <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center", color: "#12578A", fontWeight: 600 }}>
               Loading chart data...
             </div>
           ) : chartData.length === 0 ? (
-            <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center", color: "#9CA3AF", textAlign: "center" }}>
+            <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center", color: "#12578A", textAlign: "center" }}>
               No readings yet. Add the first one on the right.
             </div>
           ) : (
             <div style={{ height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                  <XAxis dataKey="time" stroke="#9CA3AF" fontSize={12} tickLine={false} />
-                  <YAxis stroke="#9CA3AF" fontSize={12} domain={[40, 300]} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#BAE6FD" />
+                  <XAxis dataKey="time" stroke="#12578A" fontSize={12} tickLine={false} />
+                  <YAxis stroke="#12578A" fontSize={12} domain={[40, 300]} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ background: "#fff", borderRadius: 8, border: "1px solid #E5E7EB", fontSize: 13 }}
+                    contentStyle={{ background: "#F0F9FF", borderRadius: 8, border: "1.5px solid #7DD3FC", fontSize: 13, color: "#083457" }}
                     formatter={(val: any) => [`${val} mg/dL`, "Glucose"]}
                   />
                   {/* Reference threshold lines */}
@@ -252,9 +252,9 @@ export function DiabetesTab({
                   <Line
                     type="monotone"
                     dataKey="glucose"
-                    stroke="#0D9488"
+                    stroke="#1DA1F2"
                     strokeWidth={3}
-                    dot={{ fill: "#0D9488", r: 4 }}
+                    dot={{ fill: "#1DA1F2", r: 4 }}
                     activeDot={{ r: 7 }}
                   />
                 </LineChart>
@@ -265,16 +265,16 @@ export function DiabetesTab({
 
         {/* Quick Add Form */}
         <div style={{
-          background: "#fff",
-          border: "1px solid #E5E7EB",
+          background: "#EDF7FE",
+          border: "1.5px solid #7DD3FC",
           borderRadius: 16,
           padding: "24px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+          boxShadow: "0 4px 20px rgba(12, 133, 208, 0.12)"
         }}>
-          <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700, color: "#111827" }}>
+          <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 800, color: "#083457" }}>
             Log Glucose Reading
           </h3>
-          <p style={{ margin: "0 0 20px", fontSize: 13, color: "#6B7280" }}>
+          <p style={{ margin: "0 0 20px", fontSize: 13, color: "#12578A" }}>
             Record fasting, post-meal, or bedtime check.
           </p>
 
@@ -284,14 +284,14 @@ export function DiabetesTab({
             </div>
           )}
           {success && (
-            <div style={{ background: "#D1FAE5", color: "#059669", padding: "10px 12px", borderRadius: 8, fontSize: 13, marginBottom: 16 }}>
+            <div style={{ background: "#E0F2FE", border: "1px solid #7DD3FC", color: "#083457", padding: "10px 12px", borderRadius: 8, fontSize: 13, marginBottom: 16, fontWeight: 700 }}>
               {success}
             </div>
           )}
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#083457", marginBottom: 6 }}>
                 Timing Slot
               </label>
               <select
@@ -301,7 +301,9 @@ export function DiabetesTab({
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: 10,
-                  border: "1.5px solid #D1D5DB",
+                  border: "1.5px solid #7DD3FC",
+                  background: "#F0F9FF",
+                  color: "#083457",
                   fontSize: 14,
                   outline: "none",
                 }}
@@ -313,7 +315,7 @@ export function DiabetesTab({
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#083457", marginBottom: 6 }}>
                 Blood Glucose (mg/dL)
               </label>
               <input
@@ -329,16 +331,18 @@ export function DiabetesTab({
                   width: "100%",
                   padding: "12px 14px",
                   borderRadius: 10,
-                  border: "1.5px solid #D1D5DB",
+                  border: "1.5px solid #7DD3FC",
+                  background: "#F0F9FF",
+                  color: "#083457",
                   fontSize: 16,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   outline: "none",
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#083457", marginBottom: 6 }}>
                 Clinical Note (Optional)
               </label>
               <input
@@ -350,7 +354,9 @@ export function DiabetesTab({
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: 10,
-                  border: "1.5px solid #D1D5DB",
+                  border: "1.5px solid #7DD3FC",
+                  background: "#F0F9FF",
+                  color: "#083457",
                   fontSize: 14,
                   outline: "none",
                 }}
@@ -363,15 +369,15 @@ export function DiabetesTab({
               style={{
                 marginTop: 8,
                 padding: "12px 18px",
-                background: "#0D9488",
+                background: "linear-gradient(135deg, #1DA1F2 0%, #0C85D0 100%)",
                 color: "#fff",
                 border: "none",
                 borderRadius: 10,
                 fontSize: 15,
-                fontWeight: 700,
+                fontWeight: 800,
                 cursor: submitting ? "not-allowed" : "pointer",
                 opacity: submitting ? 0.7 : 1,
-                boxShadow: "0 2px 6px rgba(13,148,136,0.25)",
+                boxShadow: "0 4px 14px rgba(12,133,208,0.3)",
               }}
             >
               {submitting ? "Saving..." : "+ Save Reading"}

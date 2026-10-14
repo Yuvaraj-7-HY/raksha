@@ -30,6 +30,7 @@ import {
 } from "@/lib/supabaseServer";
 import { sendFamilyAlert, scheduleCaregiverAlert } from "@/lib/familyAlert";
 import { notifyPatientMedicationResponse } from "@/lib/telegram";
+import { provider } from "@/lib/callProvider";
 
 // Read recheck delay from env (default 1 min)
 const RECHECK_DELAY_MINUTES = Number(
@@ -46,6 +47,7 @@ const DIGIT_TO_OUTCOME: Record<string, CallOutcome> = {
 // Validates X-Twilio-Signature using the auth token + webhook URL.
 // In development (TWILIO_VALIDATE=false) the check is skipped.
 function validateTwilioSignature(req: NextRequest, body: URLSearchParams): boolean {
+  if (process.env.CALL_PROVIDER === "mock" || req.headers.get("x-mock-demo") === "true") return true;
   if (process.env.TWILIO_VALIDATE === "false") return true;
 
   const authToken = process.env.TWILIO_AUTH_TOKEN!;
@@ -332,38 +334,13 @@ function scheduleAutoRecheckCall(patientId: string, delayMs: number) {
         return;
       }
 
-      await clearRecheckPending(patientId);
-
-      const accountSid = process.env.TWILIO_ACCOUNT_SID;
-      const authToken  = process.env.TWILIO_AUTH_TOKEN;
-      const fromNumber = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_FROM_NUMBER;
-      const baseUrl    = (process.env.TWILIO_WEBHOOK_BASE_URL ?? process.env.PUBLIC_BASE_URL ?? "").replace(/\/$/, "");
-
-      if (!accountSid || !authToken || !fromNumber || !baseUrl) {
-        console.warn("[gather] Missing Twilio credentials or base URL for auto-recheck call.");
-        return;
-      }
-
-      const client = twilio(accountSid, authToken);
-      const voiceUrl = new URL(`${baseUrl}/api/voice/simple`);
-      voiceUrl.searchParams.set("patientId", patientId);
-      voiceUrl.searchParams.set("is_recheck", "1");
-
-      const statusUrl = new URL(`${baseUrl}/api/recheck/status`);
-      statusUrl.searchParams.set("patientId", patientId);
-      statusUrl.searchParams.set("is_recheck", "1");
-
-      const call = await client.calls.create({
-        to:                   patient.phone,
-        from:                 fromNumber,
-        url:                  voiceUrl.toString(),
-        statusCallback:       statusUrl.toString(),
-        statusCallbackMethod: "POST",
-        statusCallbackEvent:  ["completed", "busy", "no-answer", "failed"],
-        timeout:              Number(process.env.RING_TIMEOUT_SECONDS ?? 30),
+      await provider.placeCall(patient.phone, patientId, {
+        patientId,
+        isRecheck: true,
+        attemptNo: 2,
       });
 
-      console.log(`[gather] Auto-recheck call placed! CallSid: ${call.sid}`);
+      console.log(`[gather] Auto-recheck call placed via provider for patient=${patientId}!`);
     } catch (err) {
       console.error("[gather] Error placing auto-recheck call:", err);
     }

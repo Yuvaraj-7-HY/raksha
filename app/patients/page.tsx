@@ -35,10 +35,10 @@ interface DynamicPatient {
 }
 
 const CONDITION_BADGE_STYLES: Record<ConditionType, { bg: string; color: string; border: string }> = {
-  diabetes: { bg: "#CCFBF1", color: "#0F766E", border: "#99F6E4" },
-  hypertension: { bg: "#FFE4E6", color: "#BE123C", border: "#FECDD3" },
-  dementia: { bg: "#FEF3C7", color: "#B45309", border: "#FDE68A" },
-  depression: { bg: "#EDE9FE", color: "#6D28D9", border: "#DDD6FE" },
+  diabetes: { bg: "#BAE6FD", color: "#0369A1", border: "#7DD3FC" },
+  hypertension: { bg: "#FECDD3", color: "#BE123C", border: "#FDA4AF" },
+  dementia: { bg: "#FEF08A", color: "#854D0E", border: "#FDE047" },
+  depression: { bg: "#DDD6FE", color: "#6D28D9", border: "#C4B5FD" },
 };
 
 function Skeleton() {
@@ -49,8 +49,9 @@ function Skeleton() {
           key={i}
           style={{
             height: 96,
-            borderRadius: 14,
-            background: "#F3F4F6",
+            borderRadius: 16,
+            background: "#D8EEFD",
+            border: "1.5px solid #90CDF4",
             animation: "pulse 1.5s ease-in-out infinite",
           }}
         />
@@ -170,7 +171,7 @@ function PatientsContent() {
   });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "Inter,ui-sans-serif,system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #BAE6FD 0%, #D4EEFD 40%, #C3E5FC 100%)", color: "#083457", fontFamily: "Inter,ui-sans-serif,system-ui,sans-serif" }}>
       {/* Toast */}
       {toast && (
         <div style={{
@@ -178,22 +179,23 @@ function PatientsContent() {
           bottom: 28,
           right: 28,
           zIndex: 99999,
-          background: "#111827",
-          color: "#fff",
+          background: "#083457",
+          color: "#E0F2FE",
+          border: "1.5px solid #1DA1F2",
           padding: "12px 20px",
           borderRadius: 12,
           fontSize: 13,
-          fontWeight: 600,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+          fontWeight: 700,
+          boxShadow: "0 8px 24px rgba(8, 52, 87, 0.25)",
         }}>
           ✓ {toast}
         </div>
       )}
 
-      {/* Header */}
+      {/* Header - Vibrant Twitter Sky Blue */}
       <header style={{
-        background: "#fff",
-        borderBottom: "1px solid #E2E8F0",
+        background: "linear-gradient(135deg, #1DA1F2 0%, #0C85D0 100%)",
+        borderBottom: "2px solid #0A72B3",
         padding: "0 32px",
         height: 68,
         display: "flex",
@@ -202,37 +204,78 @@ function PatientsContent() {
         position: "sticky",
         top: 0,
         zIndex: 30,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+        boxShadow: "0 4px 20px rgba(12, 133, 208, 0.25)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{
             width: 42,
             height: 42,
             borderRadius: 12,
-            background: "#0D9488",
+            background: "#083457",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            boxShadow: "0 2px 10px rgba(8, 52, 87, 0.3)",
           }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1DA1F2" strokeWidth="2.6">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </div>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0F172A", letterSpacing: "-0.02em" }}>
+              <h1 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.02em" }}>
                 Raksha Care Platform
               </h1>
-              <span style={{ fontSize: 11, background: "#CCFBF1", color: "#0F766E", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+              <span style={{ fontSize: 11, background: "#083457", color: "#BAE6FD", border: "1px solid rgba(186, 230, 253, 0.4)", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
                 Condition-Aware
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: 11, color: "#64748B" }}>{todayStr} · Asia/Kolkata (IST)</p>
+            <p style={{ margin: 0, fontSize: 11, color: "#E0F2FE", fontWeight: 500 }}>{todayStr} · Asia/Kolkata (IST)</p>
           </div>
         </div>
 
         {/* Header Action Buttons */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {/* Landing Link */}
+          <Link
+            href="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              borderRadius: 10,
+              background: "rgba(8, 52, 87, 0.3)",
+              border: "1px solid rgba(224, 242, 254, 0.4)",
+              color: "#FFFFFF",
+              fontSize: 12,
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            🏠 Home
+          </Link>
+
+          {/* Demo Call Shortcut */}
+          <Link
+            href="/demo-call"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              borderRadius: 10,
+              background: "#083457",
+              border: "1px solid #1DA1F2",
+              color: "#BAE6FD",
+              fontSize: 12,
+              fontWeight: 700,
+              textDecoration: "none",
+            }}
+          >
+            🎙️ Voice Demo
+          </Link>
+
           {/* Active Alerts Button */}
           <button
             onClick={() => setShowAlertsModal(true)}
@@ -240,11 +283,11 @@ function PatientsContent() {
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
-              padding: "9px 15px",
+              padding: "8px 14px",
               borderRadius: 10,
-              background: totalOpenAlerts > 0 ? "#FEF2F2" : "#F0FDF4",
-              border: `1.5px solid ${totalOpenAlerts > 0 ? "#FCA5A5" : "#BBF7D0"}`,
-              color: totalOpenAlerts > 0 ? "#DC2626" : "#16A34A",
+              background: totalOpenAlerts > 0 ? "#FEE2E2" : "#D1FAE5",
+              border: `1.5px solid ${totalOpenAlerts > 0 ? "#FCA5A5" : "#6EE7B7"}`,
+              color: totalOpenAlerts > 0 ? "#B91C1C" : "#065F46",
               fontSize: 13,
               fontWeight: 700,
               cursor: "pointer",
@@ -252,7 +295,7 @@ function PatientsContent() {
           >
             <span>🔔 Alerts</span>
             <span style={{
-              background: totalOpenAlerts > 0 ? "#DC2626" : "#16A34A",
+              background: totalOpenAlerts > 0 ? "#DC2626" : "#059669",
               color: "#fff",
               padding: "1px 7px",
               borderRadius: 999,
@@ -271,11 +314,11 @@ function PatientsContent() {
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              padding: "9px 15px",
+              padding: "8px 14px",
               borderRadius: 10,
-              border: "1.5px solid #CBD5E1",
-              background: "#fff",
-              color: "#334155",
+              border: "1px solid rgba(255, 255, 255, 0.4)",
+              background: "rgba(255, 255, 255, 0.2)",
+              color: "#FFFFFF",
               fontSize: 13,
               fontWeight: 600,
               cursor: runningInactivityCheck ? "not-allowed" : "pointer",
@@ -288,14 +331,15 @@ function PatientsContent() {
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            padding: "9px 16px",
+            padding: "8px 16px",
             borderRadius: 10,
-            background: "#0D9488",
-            color: "#fff",
+            background: "#083457",
+            color: "#FFFFFF",
+            border: "1.5px solid #1DA1F2",
             textDecoration: "none",
             fontSize: 13,
             fontWeight: 700,
-            boxShadow: "0 2px 6px rgba(13,148,136,0.2)",
+            boxShadow: "0 3px 10px rgba(8, 52, 87, 0.3)",
           }}>
             + Add Patient
           </Link>
@@ -306,19 +350,20 @@ function PatientsContent() {
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 24px" }}>
         {/* Navigation Tabs */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ display: "flex", gap: 8, background: "#E2E8F0", padding: 4, borderRadius: 12 }}>
+          <div style={{ display: "flex", gap: 6, background: "#BAE6FD", border: "1.5px solid #7DD3FC", padding: 4, borderRadius: 12 }}>
             <button
               onClick={() => setTab("patients")}
               style={{
                 padding: "8px 18px",
                 borderRadius: 9,
                 border: "none",
-                background: tab === "patients" ? "#fff" : "transparent",
-                color: tab === "patients" ? "#0F172A" : "#64748B",
+                background: tab === "patients" ? "#1DA1F2" : "transparent",
+                color: tab === "patients" ? "#FFFFFF" : "#083457",
                 fontSize: 13,
                 fontWeight: 700,
                 cursor: "pointer",
-                boxShadow: tab === "patients" ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+                boxShadow: tab === "patients" ? "0 2px 8px rgba(29,161,242,0.35)" : "none",
+                transition: "all 0.15s ease",
               }}
             >
               Patients ({patients.length})
@@ -329,12 +374,13 @@ function PatientsContent() {
                 padding: "8px 18px",
                 borderRadius: 9,
                 border: "none",
-                background: tab === "medications" ? "#fff" : "transparent",
-                color: tab === "medications" ? "#0F172A" : "#64748B",
+                background: tab === "medications" ? "#1DA1F2" : "transparent",
+                color: tab === "medications" ? "#FFFFFF" : "#083457",
                 fontSize: 13,
                 fontWeight: 700,
                 cursor: "pointer",
-                boxShadow: tab === "medications" ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+                boxShadow: tab === "medications" ? "0 2px 8px rgba(29,161,242,0.35)" : "none",
+                transition: "all 0.15s ease",
               }}
             >
               Medications Hub ({medications.length})
@@ -346,19 +392,20 @@ function PatientsContent() {
           <>
             {/* Filter Bar: Condition Chips + Severity + Search */}
             <div style={{
-              background: "#fff",
-              border: "1px solid #E2E8F0",
-              borderRadius: 14,
+              background: "#E0F2FE",
+              border: "1.5px solid #7DD3FC",
+              borderRadius: 16,
               padding: "16px 20px",
               marginBottom: 24,
               display: "flex",
               flexDirection: "column",
               gap: 14,
+              boxShadow: "0 4px 16px rgba(12, 133, 208, 0.12)",
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                 {/* Condition filter chips */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#083457", textTransform: "uppercase" }}>
                     Condition:
                   </span>
                   {[
@@ -374,12 +421,13 @@ function PatientsContent() {
                       style={{
                         padding: "6px 12px",
                         borderRadius: 8,
-                        border: `1.5px solid ${selectedCondition === item.id ? "#0D9488" : "#E2E8F0"}`,
-                        background: selectedCondition === item.id ? "#CCFBF1" : "#F8FAFC",
-                        color: selectedCondition === item.id ? "#0F766E" : "#475569",
+                        border: `1.5px solid ${selectedCondition === item.id ? "#0C85D0" : "#7DD3FC"}`,
+                        background: selectedCondition === item.id ? "#1DA1F2" : "#BAE6FD",
+                        color: selectedCondition === item.id ? "#FFFFFF" : "#083457",
                         fontSize: 12,
-                        fontWeight: selectedCondition === item.id ? 700 : 500,
+                        fontWeight: selectedCondition === item.id ? 700 : 600,
                         cursor: "pointer",
+                        transition: "all 0.15s ease",
                       }}
                     >
                       {item.label}
@@ -389,14 +437,14 @@ function PatientsContent() {
 
                 {/* Severity status filter */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#083457", textTransform: "uppercase" }}>
                     Status:
                   </span>
                   {[
-                    { id: "all", label: "All Statuses", color: "#475569" },
-                    { id: "red", label: "Urgent (Red)", color: "#DC2626" },
-                    { id: "amber", label: "Warning (Amber)", color: "#D97706" },
-                    { id: "green", label: "Normal (Green)", color: "#16A34A" },
+                    { id: "all", label: "All Statuses", color: "#083457" },
+                    { id: "red", label: "Urgent (Red)", color: "#B91C1C" },
+                    { id: "amber", label: "Warning (Amber)", color: "#B45309" },
+                    { id: "green", label: "Normal (Green)", color: "#047857" },
                   ].map((s) => (
                     <button
                       key={s.id}
@@ -404,12 +452,13 @@ function PatientsContent() {
                       style={{
                         padding: "6px 10px",
                         borderRadius: 8,
-                        border: `1.5px solid ${selectedSeverity === s.id ? s.color : "#E2E8F0"}`,
-                        background: selectedSeverity === s.id ? "#fff" : "#F8FAFC",
-                        color: selectedSeverity === s.id ? s.color : "#64748B",
+                        border: `1.5px solid ${selectedSeverity === s.id ? s.color : "#7DD3FC"}`,
+                        background: selectedSeverity === s.id ? "#BAE6FD" : "#D4EEFD",
+                        color: selectedSeverity === s.id ? s.color : "#083457",
                         fontSize: 12,
-                        fontWeight: selectedSeverity === s.id ? 700 : 500,
+                        fontWeight: selectedSeverity === s.id ? 700 : 600,
                         cursor: "pointer",
+                        transition: "all 0.15s ease",
                       }}
                     >
                       {s.label}
@@ -427,15 +476,17 @@ function PatientsContent() {
                   onChange={(e) => setSearch(e.target.value)}
                   style={{
                     width: "100%",
-                    padding: "10px 14px 10px 36px",
+                    padding: "10px 14px 10px 38px",
                     borderRadius: 10,
-                    border: "1.5px solid #E2E8F0",
+                    border: "1.5px solid #7DD3FC",
                     fontSize: 13,
                     outline: "none",
-                    background: "#F8FAFC",
+                    background: "#F0F9FF",
+                    color: "#083457",
+                    boxSizing: "border-box",
                   }}
                 />
-                <span style={{ position: "absolute", left: 12, top: 11, color: "#94A3B8", fontSize: 14 }}>
+                <span style={{ position: "absolute", left: 14, top: 11, color: "#0C85D0", fontSize: 14 }}>
                   🔍
                 </span>
               </div>
@@ -446,16 +497,16 @@ function PatientsContent() {
               <Skeleton />
             ) : filteredPatients.length === 0 ? (
               <div style={{
-                background: "#fff",
-                border: "1.5px dashed #CBD5E1",
+                background: "#EDF7FE",
+                border: "1.5px dashed #7DD3FC",
                 borderRadius: 16,
                 padding: "64px 24px",
                 textAlign: "center",
               }}>
-                <p style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700, color: "#0F172A" }}>
+                <p style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700, color: "#083457" }}>
                   No matching patients found
                 </p>
-                <p style={{ margin: "0 0 20px", fontSize: 13, color: "#64748B" }}>
+                <p style={{ margin: "0 0 20px", fontSize: 13, color: "#12578A" }}>
                   Try resetting filters or adding a new patient.
                 </p>
                 <button
@@ -467,11 +518,11 @@ function PatientsContent() {
                   style={{
                     padding: "8px 16px",
                     borderRadius: 8,
-                    background: "#0D9488",
+                    background: "#1DA1F2",
                     color: "#fff",
                     border: "none",
                     fontSize: 13,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: "pointer",
                   }}
                 >
@@ -482,16 +533,16 @@ function PatientsContent() {
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {filteredPatients.map((p) => {
                   const statusDotColor =
-                    p.status === "red" ? "#DC2626" : p.status === "amber" ? "#F59E0B" : "#16A34A";
+                    p.status === "red" ? "#E11D48" : p.status === "amber" ? "#D97706" : "#059669";
                   const statusBg =
-                    p.status === "red" ? "#FEF2F2" : p.status === "amber" ? "#FFFBEB" : "#F0FDF4";
+                    p.status === "red" ? "#FFE4E6" : p.status === "amber" ? "#FEF3C7" : "#D1FAE5";
 
                   return (
                     <div
                       key={p.id}
                       style={{
-                        background: "#fff",
-                        border: "1.5px solid #E2E8F0",
+                        background: "#EDF7FE",
+                        border: "1.5px solid #7DD3FC",
                         borderRadius: 16,
                         padding: "18px 22px",
                         display: "flex",
@@ -499,7 +550,7 @@ function PatientsContent() {
                         justifyContent: "space-between",
                         gap: 20,
                         transition: "all 0.15s ease",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                        boxShadow: "0 2px 10px rgba(12, 133, 208, 0.08)",
                       }}
                     >
                       {/* Left: Patient Details */}
@@ -521,7 +572,7 @@ function PatientsContent() {
                             style={{
                               fontSize: 16,
                               fontWeight: 800,
-                              color: "#0F172A",
+                              color: "#083457",
                               textDecoration: "none",
                             }}
                           >
@@ -532,18 +583,31 @@ function PatientsContent() {
                           <span style={{
                             fontSize: 11,
                             fontWeight: 700,
-                            padding: "2px 8px",
+                            padding: "3px 9px",
                             borderRadius: 6,
                             background: p.recheck_pending
-                              ? "#FFFBEB"
+                              ? "#FEF3C7"
                               : p.last_contact_status === "yes"
-                              ? "#F0FDF4"
-                              : "#F1F5F9",
+                              ? "#D1FAE5"
+                              : p.last_contact_status === "no"
+                              ? "#FFE4E6"
+                              : "#BAE6FD",
                             color: p.recheck_pending
-                              ? "#D97706"
+                              ? "#B45309"
                               : p.last_contact_status === "yes"
-                              ? "#16A34A"
-                              : "#64748B",
+                              ? "#065F46"
+                              : p.last_contact_status === "no"
+                              ? "#9F1239"
+                              : "#083457",
+                            border: `1px solid ${
+                              p.recheck_pending
+                                ? "#FDE68A"
+                                : p.last_contact_status === "yes"
+                                ? "#6EE7B7"
+                                : p.last_contact_status === "no"
+                                ? "#FECDD3"
+                                : "#7DD3FC"
+                            }`,
                           }}>
                             {p.recheck_pending
                               ? "Re-check Pending"
@@ -560,9 +624,9 @@ function PatientsContent() {
                           {p.conditions && p.conditions.length > 0 ? (
                             p.conditions.map((cond) => {
                               const s = CONDITION_BADGE_STYLES[cond] || {
-                                bg: "#F1F5F9",
-                                color: "#475569",
-                                border: "#E2E8F0",
+                                bg: "#BAE6FD",
+                                color: "#083457",
+                                border: "#7DD3FC",
                               };
                               return (
                                 <span
@@ -583,15 +647,15 @@ function PatientsContent() {
                               );
                             })
                           ) : (
-                            <span style={{ fontSize: 11, color: "#94A3B8" }}>No active conditions assigned</span>
+                            <span style={{ fontSize: 11, color: "#12578A" }}>No active conditions assigned</span>
                           )}
                         </div>
 
                         {/* Vitals Summary & Phone */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, color: "#64748B" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, color: "#12578A" }}>
                           <span>📞 {p.phone}</span>
                           <span>•</span>
-                          <span style={{ fontWeight: 600, color: "#334155" }}>
+                          <span style={{ fontWeight: 700, color: "#083457" }}>
                             {p.latest_vitals_summary}
                           </span>
                         </div>
@@ -606,12 +670,13 @@ function PatientsContent() {
                             fontSize: 12,
                             fontWeight: 700,
                             background: p.urgent_alerts_count > 0 ? "#FEE2E2" : "#FEF3C7",
-                            color: p.urgent_alerts_count > 0 ? "#DC2626" : "#B45309",
+                            color: p.urgent_alerts_count > 0 ? "#B91C1C" : "#B45309",
+                            border: `1px solid ${p.urgent_alerts_count > 0 ? "#FCA5A5" : "#FDE68A"}`,
                           }}>
                             {p.open_alerts_count} Open Alert{p.open_alerts_count > 1 ? "s" : ""}
                           </span>
                         ) : (
-                          <span style={{ fontSize: 12, color: "#16A34A", fontWeight: 600 }}>
+                          <span style={{ fontSize: 12, color: "#059669", fontWeight: 700 }}>
                             ✓ All Normal
                           </span>
                         )}
@@ -619,9 +684,9 @@ function PatientsContent() {
                         <Link
                           href={`/patients/${p.id}`}
                           style={{
-                            padding: "9px 16px",
+                            padding: "8px 16px",
                             borderRadius: 10,
-                            background: "#0D9488",
+                            background: "#1DA1F2",
                             color: "#fff",
                             textDecoration: "none",
                             fontSize: 13,
@@ -629,6 +694,7 @@ function PatientsContent() {
                             display: "inline-flex",
                             alignItems: "center",
                             gap: 4,
+                            boxShadow: "0 2px 10px rgba(29, 161, 242, 0.35)",
                           }}
                         >
                           View Profile →
@@ -644,9 +710,9 @@ function PatientsContent() {
 
         {/* Medications tab view */}
         {tab === "medications" && (
-          <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 16, padding: "24px" }}>
+          <div style={{ background: "#EDF7FE", border: "1.5px solid #7DD3FC", borderRadius: 16, padding: "24px", boxShadow: "0 4px 16px rgba(12, 133, 208, 0.12)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0F172A" }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#083457" }}>
                 Active Medication Schedules
               </h2>
               <Link
@@ -654,11 +720,12 @@ function PatientsContent() {
                 style={{
                   padding: "8px 14px",
                   borderRadius: 8,
-                  background: "#0D9488",
+                  background: "#1DA1F2",
                   color: "#fff",
                   fontSize: 12,
                   fontWeight: 700,
                   textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(29,161,242,0.35)",
                 }}
               >
                 + Add Medication
@@ -666,14 +733,15 @@ function PatientsContent() {
             </div>
 
             {medications.length === 0 ? (
-              <p style={{ color: "#94A3B8", textAlign: "center", padding: 32 }}>No medications added yet.</p>
+              <p style={{ color: "#12578A", textAlign: "center", padding: 32 }}>No medications added yet.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {medications.map((m) => (
                   <div
                     key={m.id}
                     style={{
-                      border: "1px solid #E2E8F0",
+                      border: "1px solid #7DD3FC",
+                      background: "#E0F2FE",
                       borderRadius: 10,
                       padding: "12px 16px",
                       display: "flex",
@@ -682,17 +750,17 @@ function PatientsContent() {
                     }}
                   >
                     <div>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>{m.name}</span>
-                      <span style={{ fontSize: 12, color: "#64748B", marginLeft: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#083457" }}>{m.name}</span>
+                      <span style={{ fontSize: 12, color: "#12578A", marginLeft: 8 }}>
                         {m.dosage} {m.unit} · {m.schedule}
                       </span>
                     </div>
                     <button
                       onClick={() => handleDeleteMed(m.id, m.name)}
                       style={{
-                        background: "#FEF2F2",
+                        background: "#FFE4E6",
                         border: "1px solid #FECDD3",
-                        color: "#DC2626",
+                        color: "#BE123C",
                         borderRadius: 6,
                         padding: "4px 8px",
                         fontSize: 11,

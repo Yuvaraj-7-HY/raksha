@@ -1,6 +1,7 @@
-import { redirect } from "next/navigation";
+import RakshaLandingPage from "@/components/landing/RakshaLandingPage";
 
 export default function Home() {
-  redirect("/patients");
+  return <RakshaLandingPage />;
 }
+
 

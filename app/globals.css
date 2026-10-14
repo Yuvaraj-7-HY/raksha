@@ -1,49 +1,49 @@
 @import "tailwindcss";
 
 /* ─── Healthcare SaaS Design Tokens ────────────────────────────────────────── */
+/* ─── Light/Sky Blue & Deep Blue Contrast SaaS Design Tokens ──────────────── */
 :root {
-  /* Brand */
-  --primary:        #E31837;
-  --primary-hover:  #c41430;
-  --primary-soft:   #fde8ec;
-  --navy:           #062F67;
-  --navy-hover:     #052860;
-  --navy-soft:      #e8eef7;
+  /* Brand - Twitter Blue */
+  --primary:        #1DA1F2;
+  --primary-hover:  #0C85D0;
+  --primary-soft:   #BAE6FD;
+  --navy:           #083457;
+  --navy-hover:     #05233B;
+  --navy-soft:      #D4EEFD;
 
-  /* Backgrounds */
-  --bg:             #F5F7FA;
-  --surface:        #FFFFFF;
-  --surface-2:      #F5F7FA;
+  /* Backgrounds - Majorly Light/Sky Blue */
+  --bg:             #CBE7FC;
+  --surface:        #E1F2FD;
+  --surface-2:      #D4EEFD;
 
-  /* Borders */
-  --border:         #E5EAF0;
-  --border-strong:  #C8D0DC;
+  /* Borders - Sky Blue */
+  --border:         #88CCFA;
+  --border-strong:  #60B6F6;
 
-  /* Text */
-  --text-primary:   #172033;
-  --text-secondary: #718096;
-  --text-muted:     #A0AABF;
+  /* Text - Deep Contrast Blue instead of black */
+  --text-primary:   #083457;
+  --text-secondary: #12578A;
+  --text-muted:     #2B6F9E;
 
-  /* Semantic */
-  --green:          #16A36A;
-  --green-soft:     #e6f7f0;
+  /* Semantic - Vibrant Status Accents */
+  --green:          #059669;
+  --green-soft:     #D1FAE5;
   --amber:          #D97706;
   --amber-soft:     #FEF3C7;
-  --red:            #E31837;
-  --red-soft:       #fde8ec;
+  --red:            #E11D48;
+  --red-soft:       #FFE4E6;
 
   /* Shadows */
-  --shadow-sm: 0 1px 3px 0 rgba(23,32,51,0.06), 0 1px 2px 0 rgba(23,32,51,0.04);
-  --shadow-md: 0 4px 12px 0 rgba(23,32,51,0.08), 0 2px 4px 0 rgba(23,32,51,0.04);
-  --shadow-lg: 0 10px 24px 0 rgba(23,32,51,0.10), 0 4px 8px 0 rgba(23,32,51,0.06);
+  --shadow-sm: 0 1px 3px 0 rgba(12, 74, 122, 0.08);
+  --shadow-md: 0 4px 14px 0 rgba(12, 74, 122, 0.12);
+  --shadow-lg: 0 12px 28px 0 rgba(12, 74, 122, 0.16), 0 0 20px rgba(29, 161, 242, 0.2);
 
-  /* Legacy aliases (phone page compatibility) */
-  --panel:       #FFFFFF;
-  --panel-2:     #F5F7FA;
-  --line:        #E5EAF0;
-  --text:        #172033;
-  --muted:       #718096;
-  --amber-soft:  #FEF3C7;
+  /* Legacy aliases */
+  --panel:       #E1F2FD;
+  --panel-2:     #D4EEFD;
+  --line:        #88CCFA;
+  --text:        #083457;
+  --muted:       #12578A;
 }
 
 @theme inline {
@@ -80,7 +80,8 @@ body {
 }
 
 ::selection {
-  background: rgba(227,24,55,0.12);
+  background: rgba(29, 155, 240, 0.35);
+  color: #FFFFFF;
 }
 
 /* ─── Cards ──────────────────────────────────────────────────────────────────── */

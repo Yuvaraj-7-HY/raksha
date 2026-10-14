@@ -122,7 +122,7 @@ export function ConditionSetupModal({
     <div style={{
       position: "fixed",
       inset: 0,
-      background: "rgba(0,0,0,0.5)",
+      background: "rgba(8, 52, 87, 0.4)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -130,22 +130,23 @@ export function ConditionSetupModal({
       padding: 20,
     }}>
       <div style={{
-        background: "#fff",
+        background: "#EDF7FE",
+        border: "1.5px solid #7DD3FC",
         borderRadius: 20,
         maxWidth: 680,
         width: "100%",
         maxHeight: "90vh",
         display: "flex",
         flexDirection: "column",
-        boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+        boxShadow: "0 25px 50px rgba(12, 133, 208, 0.25)",
       }}>
         {/* Header */}
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid #E5E7EB", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div style={{ padding: "20px 24px", borderBottom: "1.5px solid #BAE6FD", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#111827" }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#083457" }}>
               Condition Setup &amp; Care Thresholds
             </h2>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#0D9488", fontWeight: 600 }}>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#0C85D0", fontWeight: 700 }}>
               {THRESHOLD_UI_LABEL}
             </p>
           </div>
@@ -161,12 +162,12 @@ export function ConditionSetupModal({
         <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Disclaimer banner */}
           <div style={{
-            background: "#FFFBEB",
-            border: "1px solid #FDE68A",
+            background: "#BAE6FD",
+            border: "1.5px solid #7DD3FC",
             borderRadius: 10,
             padding: "10px 14px",
             fontSize: 12,
-            color: "#92400E",
+            color: "#083457",
             lineHeight: 1.5,
           }}>
             ⚖️ <strong>Clinical Rule:</strong> {CLINICAL_DISCLAIMER}
@@ -187,9 +188,9 @@ export function ConditionSetupModal({
               <div
                 key={cType}
                 style={{
-                  border: `1.5px solid ${isChecked ? "#0D9488" : "#E5E7EB"}`,
+                  border: isChecked ? "2px solid #1DA1F2" : "1.5px solid #BAE6FD",
                   borderRadius: 14,
-                  background: isChecked ? "#F0FDFA" : "#fff",
+                  background: isChecked ? "#E0F2FE" : "#F0F9FF",
                   padding: "16px 18px",
                   transition: "all 0.15s ease",
                 }}
@@ -201,9 +202,9 @@ export function ConditionSetupModal({
                       id={`chk_${cType}`}
                       checked={isChecked}
                       onChange={() => handleToggleCondition(cType)}
-                      style={{ width: 20, height: 20, accentColor: "#0D9488", cursor: "pointer" }}
+                      style={{ width: 20, height: 20, accentColor: "#1DA1F2", cursor: "pointer" }}
                     />
-                    <label htmlFor={`chk_${cType}`} style={{ fontSize: 16, fontWeight: 700, color: "#111827", cursor: "pointer" }}>
+                    <label htmlFor={`chk_${cType}`} style={{ fontSize: 16, fontWeight: 800, color: "#083457", cursor: "pointer" }}>
                       {CONDITION_LABELS[cType]}
                     </label>
                   </div>
@@ -212,8 +213,7 @@ export function ConditionSetupModal({
                     fontWeight: 700,
                     padding: "3px 10px",
                     borderRadius: 999,
-                    background: isChecked ? "#CCFBF1" : "#F3F4F6",
-                    color: isChecked ? "#0F766E" : "#9CA3AF",
+                    background: isChecked ? "#BAE6FD" : "#E0F2FE", color: isChecked ? "#083457" : "#12578A", border: "1px solid #7DD3FC",
                   }}>
                     {isChecked ? "Module Active" : "Disabled"}
                   </span>
@@ -221,34 +221,34 @@ export function ConditionSetupModal({
 
                 {/* Collapsible Threshold Inputs when active */}
                 {isChecked && (
-                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px dashed #CCFBF1", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px dashed #7DD3FC", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     {cType === "diabetes" && (
                       <>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Fasting Warning (&gt; mg/dL)</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#083457" }}>Fasting Warning (&gt; mg/dL)</label>
                           <input
                             type="number"
                             value={currentT.glucoseFastingWarning}
                             onChange={(e) => handleThresholdChange("diabetes", "glucoseFastingWarning", Number(e.target.value))}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, marginTop: 4 }}
+                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1.5px solid #7DD3FC", background: "#F0F9FF", color: "#083457", fontSize: 13, marginTop: 4, outline: "none" }}
                           />
                         </div>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Urgent High (&gt; mg/dL)</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#083457" }}>Urgent High (&gt; mg/dL)</label>
                           <input
                             type="number"
                             value={currentT.glucoseUrgentHigh}
                             onChange={(e) => handleThresholdChange("diabetes", "glucoseUrgentHigh", Number(e.target.value))}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, marginTop: 4 }}
+                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1.5px solid #7DD3FC", background: "#F0F9FF", color: "#083457", fontSize: 13, marginTop: 4, outline: "none" }}
                           />
                         </div>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Urgent Low (&lt; mg/dL)</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#083457" }}>Urgent Low (&lt; mg/dL)</label>
                           <input
                             type="number"
                             value={currentT.glucoseUrgentLow}
                             onChange={(e) => handleThresholdChange("diabetes", "glucoseUrgentLow", Number(e.target.value))}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, marginTop: 4 }}
+                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1.5px solid #7DD3FC", background: "#F0F9FF", color: "#083457", fontSize: 13, marginTop: 4, outline: "none" }}
                           />
                         </div>
                       </>
@@ -257,39 +257,39 @@ export function ConditionSetupModal({
                     {cType === "hypertension" && (
                       <>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Systolic Warning (&gt;= mmHg)</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#083457" }}>Systolic Warning (&gt;= mmHg)</label>
                           <input
                             type="number"
                             value={currentT.systolicWarning}
                             onChange={(e) => handleThresholdChange("hypertension", "systolicWarning", Number(e.target.value))}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, marginTop: 4 }}
+                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1.5px solid #7DD3FC", background: "#F0F9FF", color: "#083457", fontSize: 13, marginTop: 4, outline: "none" }}
                           />
                         </div>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Diastolic Warning (&gt;= mmHg)</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#083457" }}>Diastolic Warning (&gt;= mmHg)</label>
                           <input
                             type="number"
                             value={currentT.diastolicWarning}
                             onChange={(e) => handleThresholdChange("hypertension", "diastolicWarning", Number(e.target.value))}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, marginTop: 4 }}
+                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1.5px solid #7DD3FC", background: "#F0F9FF", color: "#083457", fontSize: 13, marginTop: 4, outline: "none" }}
                           />
                         </div>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Crisis Systolic (&gt;= mmHg)</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#083457" }}>Crisis Systolic (&gt;= mmHg)</label>
                           <input
                             type="number"
                             value={currentT.systolicUrgent}
                             onChange={(e) => handleThresholdChange("hypertension", "systolicUrgent", Number(e.target.value))}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, marginTop: 4 }}
+                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1.5px solid #7DD3FC", background: "#F0F9FF", color: "#083457", fontSize: 13, marginTop: 4, outline: "none" }}
                           />
                         </div>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Crisis Diastolic (&gt;= mmHg)</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#083457" }}>Crisis Diastolic (&gt;= mmHg)</label>
                           <input
                             type="number"
                             value={currentT.diastolicUrgent}
                             onChange={(e) => handleThresholdChange("hypertension", "diastolicUrgent", Number(e.target.value))}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, marginTop: 4 }}
+                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1.5px solid #7DD3FC", background: "#F0F9FF", color: "#083457", fontSize: 13, marginTop: 4, outline: "none" }}
                           />
                         </div>
                       </>
@@ -298,21 +298,21 @@ export function ConditionSetupModal({
                     {cType === "depression" && (
                       <>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>PHQ-9 Moderate Warning (&gt;=)</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#083457" }}>PHQ-9 Moderate Warning (&gt;=)</label>
                           <input
                             type="number"
                             value={currentT.phq9WarningMin}
                             onChange={(e) => handleThresholdChange("depression", "phq9WarningMin", Number(e.target.value))}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, marginTop: 4 }}
+                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1.5px solid #7DD3FC", background: "#F0F9FF", color: "#083457", fontSize: 13, marginTop: 4, outline: "none" }}
                           />
                         </div>
                         <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>PHQ-9 Severe Urgent (&gt;=)</label>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#083457" }}>PHQ-9 Severe Urgent (&gt;=)</label>
                           <input
                             type="number"
                             value={currentT.phq9UrgentMin}
                             onChange={(e) => handleThresholdChange("depression", "phq9UrgentMin", Number(e.target.value))}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, marginTop: 4 }}
+                            style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1.5px solid #7DD3FC", background: "#F0F9FF", color: "#083457", fontSize: 13, marginTop: 4, outline: "none" }}
                           />
                         </div>
                       </>
@@ -320,14 +320,14 @@ export function ConditionSetupModal({
 
                     {cType === "dementia" && (
                       <div>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Confusion Warning Threshold (&gt;=)</label>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: "#083457" }}>Confusion Warning Threshold (&gt;=)</label>
                         <input
                           type="number"
                           min="1"
                           max="5"
                           value={currentT.confusionWarningThreshold}
                           onChange={(e) => handleThresholdChange("dementia", "confusionWarningThreshold", Number(e.target.value))}
-                          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, marginTop: 4 }}
+                          style={{ width: "100%", padding: "6px 10px", borderRadius: 8, border: "1.5px solid #7DD3FC", background: "#F0F9FF", color: "#083457", fontSize: 13, marginTop: 4, outline: "none" }}
                         />
                       </div>
                     )}
@@ -339,7 +339,7 @@ export function ConditionSetupModal({
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid #E5E7EB", display: "flex", justifyContent: "flex-end", gap: 12 }}>
+        <div style={{ padding: "16px 24px", borderTop: "1.5px solid #BAE6FD", display: "flex", justifyContent: "flex-end", gap: 12 }}>
           <button
             type="button"
             onClick={onClose}
@@ -347,7 +347,7 @@ export function ConditionSetupModal({
             style={{
               padding: "10px 18px",
               background: "#F3F4F6",
-              color: "#374151",
+              color: "#083457",
               border: "none",
               borderRadius: 10,
               fontSize: 14,
@@ -363,14 +363,14 @@ export function ConditionSetupModal({
             disabled={saving}
             style={{
               padding: "10px 22px",
-              background: "#0D9488",
+              background: "linear-gradient(135deg, #1DA1F2 0%, #0C85D0 100%)",
               color: "#fff",
               border: "none",
               borderRadius: 10,
               fontSize: 14,
-              fontWeight: 700,
+              fontWeight: 800,
               cursor: saving ? "not-allowed" : "pointer",
-              boxShadow: "0 2px 6px rgba(13,148,136,0.25)",
+              boxShadow: "0 4px 14px rgba(12, 133, 208, 0.3)",
             }}
           >
             {saving ? "Saving..." : "Save Configuration"}

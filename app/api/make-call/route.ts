@@ -3,6 +3,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
+import { db } from "@/lib/supabaseServer";
+import { notifyCallAttempt } from "@/lib/telegram";
 
 export async function POST(req: NextRequest) {
   try {
@@ -80,6 +82,39 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`[make-call] Call placed successfully. SID: ${call.sid}`);
+
+    // Record in Supabase call_attempts table
+    if (patientId) {
+      try {
+        const supabase = db.get();
+        const { count } = await supabase
+          .from("call_attempts")
+          .select("*", { count: "exact", head: true })
+          .eq("patient_id", patientId);
+
+        await supabase.from("call_attempts").insert({
+          patient_id: patientId,
+          attempt_number: (count ?? 0) + 1,
+          outcome: "completed",
+          twilio_call_sid: call.sid,
+          is_recheck: false,
+        });
+      } catch (e) {
+        console.warn("[make-call] Supabase call_attempts insert note:", e);
+      }
+    }
+
+    // Broadcast update to Telegram Bot
+    notifyCallAttempt({
+      patientName: name,
+      patientPhone: normalizedTo,
+      patientId: patientId || undefined,
+      recipientName: caregiverName || "Caregiver",
+      recipientPhone: normalizedTo,
+      outcome: "completed",
+      callSid: call.sid,
+      notes: speechMessage.slice(0, 100),
+    }).catch((e) => console.error("[make-call] Telegram notify note:", e));
 
     return NextResponse.json({
       success: true,

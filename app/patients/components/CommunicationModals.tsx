@@ -127,12 +127,13 @@ export function SendSmsModal({
     >
       <div
         style={{
-          background: "#FFFFFF",
+          background: "#EDF7FE",
+          border: "1.5px solid #7DD3FC",
           borderRadius: 20,
           maxWidth: 500,
           width: "100%",
           padding: "24px 26px",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+          boxShadow: "0 25px 50px -12px rgba(12, 133, 208, 0.3)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -144,7 +145,8 @@ export function SendSmsModal({
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                background: "#E0F2FE",
+                background: "#BAE6FD",
+                border: "1px solid #7DD3FC",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -154,11 +156,11 @@ export function SendSmsModal({
               💬
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0F172A" }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#083457" }}>
                 Send SMS to Caregiver
               </h3>
-              <p style={{ margin: 0, fontSize: 12, color: "#64748B" }}>
-                Patient: <span style={{ fontWeight: 700, color: "#0F172A" }}>{patient.name}</span>
+              <p style={{ margin: 0, fontSize: 12, color: "#12578A" }}>
+                Patient: <span style={{ fontWeight: 700, color: "#083457" }}>{patient.name}</span>
               </p>
             </div>
           </div>
@@ -169,7 +171,7 @@ export function SendSmsModal({
               background: "none",
               border: "none",
               fontSize: 20,
-              color: "#94A3B8",
+              color: "#12578A",
               cursor: "pointer",
               padding: 4,
             }}
@@ -181,7 +183,7 @@ export function SendSmsModal({
         {/* Caregiver selection */}
         {patient.caregivers && patient.caregivers.length > 0 && (
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 6 }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#083457", marginBottom: 6 }}>
               Select Recipient:
             </label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -198,11 +200,11 @@ export function SendSmsModal({
                     style={{
                       padding: "6px 12px",
                       borderRadius: 10,
-                      border: isSelected ? "2px solid #00C896" : "1.5px solid #E2E8F0",
-                      background: isSelected ? "#ECFDF5" : "#F8FAFC",
+                      border: isSelected ? "2px solid #1DA1F2" : "1.5px solid #BAE6FD",
+                      background: isSelected ? "#BAE6FD" : "#F0F9FF",
                       fontSize: 12,
                       fontWeight: 700,
-                      color: isSelected ? "#065F46" : "#475569",
+                      color: "#083457",
                       cursor: "pointer",
                     }}
                   >
@@ -216,7 +218,7 @@ export function SendSmsModal({
 
         {/* Phone Input */}
         <div style={{ marginBottom: 14 }}>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 6 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#083457", marginBottom: 6 }}>
             Caregiver Phone Number (Twilio Destination):
           </label>
           <input
@@ -229,9 +231,10 @@ export function SendSmsModal({
               width: "100%",
               padding: "10px 14px",
               borderRadius: 10,
-              border: "1.5px solid #CBD5E1",
+              border: "1.5px solid #7DD3FC",
+              background: "#F0F9FF",
               fontSize: 14,
-              color: "#0F172A",
+              color: "#083457",
               fontWeight: 600,
               boxSizing: "border-box",
             }}
@@ -240,7 +243,7 @@ export function SendSmsModal({
 
         {/* Quick Message Templates */}
         <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#64748B", marginBottom: 6 }}>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#12578A", marginBottom: 6 }}>
             Quick Template Presets:
           </label>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -254,11 +257,11 @@ export function SendSmsModal({
               style={{
                 padding: "4px 8px",
                 borderRadius: 6,
-                background: "#F1F5F9",
-                border: "1px solid #E2E8F0",
+                background: "#E0F2FE",
+                border: "1px solid #7DD3FC",
                 fontSize: 11,
-                fontWeight: 600,
-                color: "#475569",
+                fontWeight: 700,
+                color: "#083457",
                 cursor: "pointer",
               }}
             >
@@ -274,10 +277,10 @@ export function SendSmsModal({
               style={{
                 padding: "4px 8px",
                 borderRadius: 6,
-                background: "#FEF2F2",
-                border: "1px solid #FECACA",
+                background: "#FEE2E2",
+                border: "1px solid #FCA5A5",
                 fontSize: 11,
-                fontWeight: 600,
+                fontWeight: 700,
                 color: "#B91C1C",
                 cursor: "pointer",
               }}
@@ -294,11 +297,11 @@ export function SendSmsModal({
               style={{
                 padding: "4px 8px",
                 borderRadius: 6,
-                background: "#F0FDF4",
-                border: "1px solid #BBF7D0",
+                background: "#BAE6FD",
+                border: "1px solid #7DD3FC",
                 fontSize: 11,
-                fontWeight: 600,
-                color: "#166534",
+                fontWeight: 700,
+                color: "#083457",
                 cursor: "pointer",
               }}
             >
@@ -309,7 +312,7 @@ export function SendSmsModal({
 
         {/* Message Input */}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 6 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#083457", marginBottom: 6 }}>
             SMS Text:
           </label>
           <textarea
@@ -321,16 +324,17 @@ export function SendSmsModal({
               width: "100%",
               padding: "10px 14px",
               borderRadius: 10,
-              border: "1.5px solid #CBD5E1",
+              border: "1.5px solid #7DD3FC",
+              background: "#F0F9FF",
               fontSize: 13,
-              color: "#0F172A",
+              color: "#083457",
               lineHeight: 1.5,
               boxSizing: "border-box",
               resize: "vertical",
             }}
           />
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
-            <span style={{ fontSize: 11, color: "#94A3B8" }}>{message.length} characters</span>
+            <span style={{ fontSize: 11, color: "#12578A" }}>{message.length} characters</span>
           </div>
         </div>
 
@@ -361,11 +365,11 @@ export function SendSmsModal({
             style={{
               padding: "9px 16px",
               borderRadius: 10,
-              border: "1px solid #CBD5E1",
-              background: "#FFFFFF",
+              border: "1.5px solid #7DD3FC",
+              background: "#E0F2FE",
               fontSize: 13,
               fontWeight: 700,
-              color: "#64748B",
+              color: "#083457",
               cursor: "pointer",
             }}
           >
@@ -379,7 +383,7 @@ export function SendSmsModal({
               padding: "9px 20px",
               borderRadius: 10,
               border: "none",
-              background: isSending ? "#94A3B8" : "#00C896",
+              background: isSending ? "#BAE6FD" : "linear-gradient(135deg, #1DA1F2 0%, #0C85D0 100%)",
               fontSize: 13,
               fontWeight: 800,
               color: "#FFFFFF",
@@ -387,7 +391,7 @@ export function SendSmsModal({
               display: "flex",
               alignItems: "center",
               gap: 8,
-              boxShadow: "0 4px 12px rgba(0, 200, 150, 0.2)",
+              boxShadow: "0 4px 14px rgba(12, 133, 208, 0.3)",
             }}
           >
             {isSending ? (
@@ -525,12 +529,13 @@ export function CallCaregiverModal({
     >
       <div
         style={{
-          background: "#FFFFFF",
+          background: "#EDF7FE",
+          border: "1.5px solid #7DD3FC",
           borderRadius: 20,
           maxWidth: 460,
           width: "100%",
           padding: "24px 26px",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+          boxShadow: "0 25px 50px -12px rgba(12, 133, 208, 0.3)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -541,7 +546,8 @@ export function CallCaregiverModal({
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                background: "#DCFCE7",
+                background: "#BAE6FD",
+                border: "1px solid #7DD3FC",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -551,11 +557,11 @@ export function CallCaregiverModal({
               📞
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0F172A" }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#083457" }}>
                 Call Caregiver
               </h3>
-              <p style={{ margin: 0, fontSize: 12, color: "#64748B" }}>
-                Patient: <span style={{ fontWeight: 700 }}>{patient.name}</span>
+              <p style={{ margin: 0, fontSize: 12, color: "#12578A" }}>
+                Patient: <span style={{ fontWeight: 700, color: "#083457" }}>{patient.name}</span>
               </p>
             </div>
           </div>
@@ -663,7 +669,7 @@ export function CallCaregiverModal({
               padding: "12px",
               borderRadius: 12,
               border: "none",
-              background: isCalling || !customPhone.trim() ? "#94A3B8" : "#00C896",
+              background: isCalling || !customPhone.trim() ? "#BAE6FD" : "linear-gradient(135deg, #1DA1F2 0%, #0C85D0 100%)",
               color: "#fff",
               fontSize: 14,
               fontWeight: 800,
@@ -672,7 +678,7 @@ export function CallCaregiverModal({
               alignItems: "center",
               justifyContent: "center",
               gap: 8,
-              boxShadow: "0 4px 12px rgba(0, 200, 150, 0.2)",
+              boxShadow: "0 4px 14px rgba(12, 133, 208, 0.3)",
             }}
           >
             {isCalling ? (
@@ -701,9 +707,9 @@ export function CallCaregiverModal({
             style={{
               padding: "11px",
               borderRadius: 12,
-              border: "1.5px solid #CBD5E1",
-              background: "#FFFFFF",
-              color: "#0F172A",
+              border: "1.5px solid #7DD3FC",
+              background: "#E0F2FE",
+              color: "#083457",
               fontSize: 13,
               fontWeight: 700,
               textDecoration: "none",

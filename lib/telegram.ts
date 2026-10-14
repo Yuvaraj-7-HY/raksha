@@ -189,3 +189,92 @@ export async function notifyPatientMedicationResponse(
 
   return anySent;
 }
+
+export interface CallAttemptNotification {
+  patientName: string;
+  patientPhone?: string;
+  patientId?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  outcome: string; // "initiated" | "completed" | "yes" | "no" | "failed" | "no-answer" | "busy" | "unclear"
+  attemptNumber?: number;
+  isRecheck?: boolean;
+  callSid?: string;
+  notes?: string;
+  targetChatId?: string;
+}
+
+/**
+ * Broadcasts a voice call log update to Telegram caregiver channels.
+ */
+export async function notifyCallAttempt(opts: CallAttemptNotification): Promise<boolean> {
+  const {
+    patientName,
+    patientPhone,
+    recipientName,
+    recipientPhone,
+    outcome,
+    attemptNumber = 1,
+    isRecheck = false,
+    callSid,
+    notes,
+    targetChatId,
+  } = opts;
+
+  let emoji = "📞";
+  let statusLabel = outcome.toUpperCase();
+  if (outcome === "yes" || outcome === "completed") {
+    emoji = "✅";
+    statusLabel = "Completed / Confirmed";
+  } else if (outcome === "no") {
+    emoji = "❌";
+    statusLabel = "Reported NOT Taken";
+  } else if (outcome === "no-answer" || outcome === "busy" || outcome === "failed") {
+    emoji = "⚠️";
+    statusLabel = `Unreached (${outcome})`;
+  } else if (outcome === "initiated") {
+    emoji = "📲";
+    statusLabel = "Call Dispatched";
+  }
+
+  const timeString = new Date().toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  const lines = [
+    `${emoji} <b>Raksha Call Log Update: ${statusLabel}</b>`,
+    ``,
+    `👤 <b>Patient:</b> ${patientName}`,
+    patientPhone ? `📱 <b>Patient Phone:</b> <code>${patientPhone}</code>` : "",
+    recipientName ? `👥 <b>Recipient:</b> ${recipientName} ${recipientPhone ? `(<code>${recipientPhone}</code>)` : ""}` : "",
+    `🔢 <b>Attempt:</b> #${attemptNumber} ${isRecheck ? "(Re-check)" : ""}`,
+    callSid ? `🆔 <b>Call SID:</b> <code>${callSid}</code>` : "",
+    notes ? `ℹ️ <i>${notes}</i>` : "",
+    `🕒 <b>Time:</b> ${timeString} IST`,
+  ].filter(Boolean);
+
+  const formattedMessage = lines.join("\n");
+
+  const targetChats = new Set<string>();
+  const famId = FAMILY_CHAT_ID || process.env.FAMILY_CHAT_ID || "8012361167";
+  if (famId) targetChats.add(famId);
+  if (targetChatId) targetChats.add(targetChatId);
+
+  let anySent = false;
+  for (const cid of targetChats) {
+    try {
+      const ok = await sendTelegram(cid, formattedMessage);
+      if (ok) anySent = true;
+    } catch (e) {
+      console.error(`[telegram] failed to send call notification to chat ${cid}:`, e);
+    }
+  }
+
+  return anySent;
+}
+

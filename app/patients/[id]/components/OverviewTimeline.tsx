@@ -144,25 +144,25 @@ export function OverviewTimeline({
   }, [patientId, callAttempts, alerts]);
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 16, padding: "24px" }}>
+    <div style={{ background: "#EDF7FE", border: "1.5px solid #7DD3FC", borderRadius: 16, padding: "24px", boxShadow: "0 4px 20px rgba(12, 133, 208, 0.12)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#111827" }}>
+          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#083457" }}>
             Patient Clinical &amp; Care Timeline
           </h3>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B7280" }}>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#12578A" }}>
             Combined stream of call responses, vitals readings, caregiver logs, and condition alerts.
           </p>
         </div>
-        <span style={{ fontSize: 12, background: "#F3F4F6", color: "#4B5563", padding: "4px 10px", borderRadius: 8, fontWeight: 600 }}>
+        <span style={{ fontSize: 12, background: "#BAE6FD", color: "#083457", padding: "4px 10px", borderRadius: 8, fontWeight: 700, border: "1px solid #7DD3FC" }}>
           {events.length} Events Logged
         </span>
       </div>
 
       {loading ? (
-        <div style={{ padding: 40, textAlign: "center", color: "#9CA3AF" }}>Loading timeline events...</div>
+        <div style={{ padding: 40, textAlign: "center", color: "#12578A", fontWeight: 600 }}>Loading timeline events...</div>
       ) : events.length === 0 ? (
-        <div style={{ padding: 40, textAlign: "center", color: "#9CA3AF" }}>
+        <div style={{ padding: 40, textAlign: "center", color: "#12578A" }}>
           No activity recorded yet for this patient.
         </div>
       ) : (
@@ -174,7 +174,7 @@ export function OverviewTimeline({
             top: 8,
             bottom: 8,
             width: 2,
-            background: "#E5E7EB",
+            background: "#7DD3FC",
           }} />
 
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -188,14 +188,14 @@ export function OverviewTimeline({
                   width: 16,
                   height: 16,
                   borderRadius: "50%",
-                  background: "#fff",
-                  border: `3px solid ${ev.type === "alert" ? "#DC2626" : ev.type === "vital" ? "#0D9488" : "#2563EB"}`,
+                  background: "#EDF7FE",
+                  border: `3px solid ${ev.type === "alert" ? "#EF4444" : ev.type === "vital" ? "#0EA5E9" : "#1DA1F2"}`,
                 }} />
 
                 <div style={{
                   flex: 1,
-                  background: "#F9FAFB",
-                  border: "1px solid #E5E7EB",
+                  background: "#E0F2FE",
+                  border: "1.5px solid #BAE6FD",
                   borderRadius: 12,
                   padding: "12px 16px",
                 }}>
@@ -212,15 +212,15 @@ export function OverviewTimeline({
                       }}>
                         {ev.badgeText}
                       </span>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: "#083457" }}>
                         {ev.title}
                       </span>
                     </div>
-                    <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+                    <span style={{ fontSize: 12, color: "#12578A", fontWeight: 600 }}>
                       {formatIstDateTime(ev.timestamp)}
                     </span>
                   </div>
-                  <p style={{ margin: 0, fontSize: 13, color: "#6B7280" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "#12578A" }}>
                     {ev.subtitle}
                   </p>
                 </div>
