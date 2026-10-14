@@ -1,71 +1,59 @@
+// app/patients/page.tsx
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  getPatients,
-  deletePatient,
   getMedications,
   deleteMedication,
-  getPrimaryCaregiver,
 } from "@/lib/storage";
-import type { Patient, Medication } from "@/types";
+import type { Medication } from "@/types";
 import {
   SendSmsModal,
   CallCaregiverModal,
   LastSmsNote,
 } from "./components/CommunicationModals";
+import { GlobalAlertsModal } from "./components/GlobalAlertsModal";
+import type { ConditionType } from "@/types/conditions";
 
-function EmptyState({ tab }: { tab: "patients" | "medications" }) {
-  if (tab === "medications") {
-    return (
-      <div style={{ textAlign: "center", padding: "64px 24px", background: "#fff", borderRadius: 16, border: "1.5px dashed #E5E7EB" }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: "50%", background: "#CCFBF1",
-          display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px"
-        }}>
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-        <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>No medications added yet</p>
-        <p style={{ fontSize: 13, color: "#9CA3AF", margin: "0 0 20px" }}>Add medicines manually or scan barcodes/prescriptions.</p>
-        <Link href="/patients/add-medication" style={{
-          display: "inline-flex", alignItems: "center", gap: 7,
-          padding: "10px 20px", borderRadius: 10, background: "#0D9488", color: "#fff",
-          textDecoration: "none", fontSize: 14, fontWeight: 700
-        }}>
-          + Add Medication
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ textAlign: "center", padding: "64px 24px", background: "#fff", borderRadius: 16, border: "1.5px dashed #E5E7EB" }}>
-      <div style={{
-        width: 56, height: 56, borderRadius: "50%", background: "#F0FDF4",
-        display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px"
-      }}>
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </div>
-      <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>No patients yet</p>
-      <p style={{ fontSize: 13, color: "#9CA3AF", margin: "0 0 20px" }}>Add your first patient to begin monitoring.</p>
-      <Link href="/patients/new" style={{
-        display: "inline-flex", alignItems: "center", gap: 7,
-        padding: "10px 20px", borderRadius: 10, background: "#0D9488", color: "#fff",
-        textDecoration: "none", fontSize: 14, fontWeight: 700
-      }}>
-        + Add Patient
-      </Link>
-    </div>
-  );
+interface DynamicPatient {
+  id: string;
+  name: string;
+  phone: string;
+  family_phone?: string;
+  conditions: ConditionType[];
+  last_contact_status: string;
+  recheck_pending: boolean;
+  open_alerts_count: number;
+  urgent_alerts_count: number;
+  warning_alerts_count: number;
+  status: "red" | "amber" | "green";
+  latest_vitals_summary: string;
+  medications?: string;
+  notes?: string;
 }
+
+const CONDITION_BADGE_STYLES: Record<ConditionType, { bg: string; color: string; border: string }> = {
+  diabetes: { bg: "#CCFBF1", color: "#0F766E", border: "#99F6E4" },
+  hypertension: { bg: "#FFE4E6", color: "#BE123C", border: "#FECDD3" },
+  dementia: { bg: "#FEF3C7", color: "#B45309", border: "#FDE68A" },
+  depression: { bg: "#EDE9FE", color: "#6D28D9", border: "#DDD6FE" },
+};
 
 function Skeleton() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {[1, 2, 3].map(i => (
-        <div key={i} style={{ height: 84, borderRadius: 14, background: "#F3F4F6", animation: "pulse 1.5s ease-in-out infinite" }} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {[1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          style={{
+            height: 96,
+            borderRadius: 14,
+            background: "#F3F4F6",
+            animation: "pulse 1.5s ease-in-out infinite",
+          }}
+        />
       ))}
     </div>
   );
@@ -78,53 +66,72 @@ function PatientsContent() {
   const initialTab = qTab === "medications" ? "medications" : "patients";
 
   const [tab, setTab] = useState<"patients" | "medications">(initialTab);
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [patients, setPatients] = useState<DynamicPatient[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedCondition, setSelectedCondition] = useState<string>("all");
+  const [selectedSeverity, setSelectedSeverity] = useState<string>("all");
   const [toast, setToast] = useState<string | null>(null);
 
-  // Twilio Communication Modals
-  const [smsModalPatient, setSmsModalPatient] = useState<Patient | null>(null);
-  const [callModalPatient, setCallModalPatient] = useState<Patient | null>(null);
+  // Inactivity check running state
+  const [runningInactivityCheck, setRunningInactivityCheck] = useState(false);
 
-  useEffect(() => {
-    if (searchParams.get("tab") === "medications") {
-      setTab("medications");
-    } else {
-      setTab("patients");
+  // Global alerts drawer modal
+  const [showAlertsModal, setShowAlertsModal] = useState(false);
+  const [totalOpenAlerts, setTotalOpenAlerts] = useState(0);
+
+  // Communication Modals
+  const [smsModalPatient, setSmsModalPatient] = useState<any | null>(null);
+  const [callModalPatient, setCallModalPatient] = useState<any | null>(null);
+
+  const fetchPatients = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/patients");
+      const data = await res.json();
+      if (data.patients) {
+        setPatients(data.patients);
+        const openSum = data.patients.reduce(
+          (acc: number, p: DynamicPatient) => acc + (p.open_alerts_count || 0),
+          0
+        );
+        setTotalOpenAlerts(openSum);
+      }
+      setMedications(getMedications());
+    } catch (err) {
+      console.error("Failed to load patients:", err);
+    } finally {
+      setLoading(false);
     }
-  }, [searchParams]);
-
-  const refreshAll = () => {
-    setPatients(getPatients());
-    setMedications(getMedications());
   };
 
   useEffect(() => {
-    refreshAll();
-    setLoading(false);
-
-    const msg = sessionStorage.getItem("raksha_toast");
-    if (msg) {
-      setToast(msg);
-      sessionStorage.removeItem("raksha_toast");
-      setTimeout(() => setToast(null), 3000);
-    }
+    fetchPatients();
   }, []);
 
-  function handleTabChange(nextTab: "patients" | "medications") {
-    setTab(nextTab);
-    router.replace(`/patients?tab=${nextTab}`, { scroll: false });
-  }
+  const handleRunInactivityCheck = async () => {
+    try {
+      setRunningInactivityCheck(true);
+      const secret = "2ea1c4261d21c5a1ecfac162fd6c141cbc2fd30341508a9dce9f9ed241674b82";
+      const res = await fetch(`/api/cron/condition-check?secret=${secret}`);
+      const data = await res.json();
 
-  function handleDeletePatient(id: string, name: string) {
-    if (!confirm(`Delete patient "${name}" and all their medications?`)) return;
-    deletePatient(id);
-    refreshAll();
-    setToast(`Patient "${name}" deleted.`);
-    setTimeout(() => setToast(null), 3000);
-  }
+      if (data.success) {
+        setToast(`Checked ${data.patients_evaluated} patients. ${data.alerts_created_count} new inactivity alerts.`);
+        await fetchPatients();
+      } else {
+        setToast("Inactivity check completed.");
+      }
+      setTimeout(() => setToast(null), 4000);
+    } catch (err) {
+      console.error("Inactivity check error:", err);
+      setToast("Error running inactivity check.");
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setRunningInactivityCheck(false);
+    }
+  };
 
   function handleDeleteMed(medId: string, medName: string) {
     if (!confirm(`Delete medication "${medName}"?`)) return;
@@ -135,48 +142,49 @@ function PatientsContent() {
   }
 
   // Filtered patients
-  const filteredPatients = patients.filter(p =>
-    !search ||
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.conditions.some(c => c.toLowerCase().includes(search.toLowerCase())) ||
-    medications.some(m => m.patientId === p.id && m.name.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  // Filtered medications
-  const filteredMedications = medications.filter(m => {
-    const pat = patients.find(p => p.id === m.patientId);
-    const patName = pat ? pat.name.toLowerCase() : "";
-    return (
-      !search ||
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.dosage.toLowerCase().includes(search.toLowerCase()) ||
-      m.schedule.toLowerCase().includes(search.toLowerCase()) ||
-      patName.includes(search.toLowerCase())
-    );
+  const filteredPatients = patients.filter((p) => {
+    // Condition filter
+    if (selectedCondition !== "all" && !p.conditions.includes(selectedCondition as ConditionType)) {
+      return false;
+    }
+    // Severity filter
+    if (selectedSeverity !== "all" && p.status !== selectedSeverity) {
+      return false;
+    }
+    // Search filter
+    if (search) {
+      const q = search.toLowerCase();
+      const matchName = p.name.toLowerCase().includes(q);
+      const matchPhone = p.phone.includes(q);
+      const matchCond = p.conditions.some((c) => c.toLowerCase().includes(q));
+      return matchName || matchPhone || matchCond;
+    }
+    return true;
   });
 
-  const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const todayStr = new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F9FAFB", fontFamily: "Inter,ui-sans-serif,system-ui,sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        * { box-sizing:border-box; }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        .fade-up { animation:fadeUp 0.3s ease-out both; }
-        .patient-card:hover { border-color:#0D9488 !important; box-shadow:0 4px 16px rgba(13,148,136,0.12) !important; }
-        .med-card:hover { border-color:#0D9488 !important; box-shadow:0 4px 16px rgba(13,148,136,0.12) !important; }
-        .del-btn:hover { background:#FEE2E2 !important; color:#DC2626 !important; }
-      `}</style>
-
+    <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "Inter,ui-sans-serif,system-ui,sans-serif" }}>
       {/* Toast */}
       {toast && (
         <div style={{
-          position: "fixed", bottom: 28, right: 28, zIndex: 99999,
-          background: "#111827", color: "#fff", padding: "12px 20px", borderRadius: 12,
-          fontSize: 13, fontWeight: 600, boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-          animation: "fadeUp 0.25s ease-out"
+          position: "fixed",
+          bottom: 28,
+          right: 28,
+          zIndex: 99999,
+          background: "#111827",
+          color: "#fff",
+          padding: "12px 20px",
+          borderRadius: 12,
+          fontSize: 13,
+          fontWeight: 600,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
         }}>
           ✓ {toast}
         </div>
@@ -184,466 +192,537 @@ function PatientsContent() {
 
       {/* Header */}
       <header style={{
-        background: "#fff", borderBottom: "1px solid #E5E7EB", padding: "0 32px",
-        height: 64, display: "flex", alignItems: "center", justifyContent: "space-between",
-        position: "sticky", top: 0, zIndex: 30, boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+        background: "#fff",
+        borderBottom: "1px solid #E2E8F0",
+        padding: "0 32px",
+        height: 68,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "sticky",
+        top: 0,
+        zIndex: 30,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{
-            width: 38, height: 38, borderRadius: 10, background: "#0D9488",
-            display: "flex", alignItems: "center", justifyContent: "center"
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            background: "#0D9488",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </div>
           <div>
-            <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#111827", letterSpacing: "-0.02em" }}>
-              Patient & Care Hub
-            </p>
-            <p style={{ margin: 0, fontSize: 11, color: "#9CA3AF" }}>{today}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0F172A", letterSpacing: "-0.02em" }}>
+                Raksha Care Platform
+              </h1>
+              <span style={{ fontSize: 11, background: "#CCFBF1", color: "#0F766E", padding: "2px 8px", borderRadius: 6, fontWeight: 700 }}>
+                Condition-Aware
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: 11, color: "#64748B" }}>{todayStr} · Asia/Kolkata (IST)</p>
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <Link href="/patients/add-medication" style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "8px 14px", borderRadius: 9, border: "1.5px solid #0D9488",
-            color: "#0D9488", textDecoration: "none", fontSize: 13, fontWeight: 700, background: "#fff"
-          }}>
-            + Add Med
-          </Link>
+        {/* Header Action Buttons */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {/* Active Alerts Button */}
+          <button
+            onClick={() => setShowAlertsModal(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "9px 15px",
+              borderRadius: 10,
+              background: totalOpenAlerts > 0 ? "#FEF2F2" : "#F0FDF4",
+              border: `1.5px solid ${totalOpenAlerts > 0 ? "#FCA5A5" : "#BBF7D0"}`,
+              color: totalOpenAlerts > 0 ? "#DC2626" : "#16A34A",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            <span>🔔 Alerts</span>
+            <span style={{
+              background: totalOpenAlerts > 0 ? "#DC2626" : "#16A34A",
+              color: "#fff",
+              padding: "1px 7px",
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 800,
+            }}>
+              {totalOpenAlerts}
+            </span>
+          </button>
+
+          {/* Inactivity Check Trigger Button */}
+          <button
+            onClick={handleRunInactivityCheck}
+            disabled={runningInactivityCheck}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "9px 15px",
+              borderRadius: 10,
+              border: "1.5px solid #CBD5E1",
+              background: "#fff",
+              color: "#334155",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: runningInactivityCheck ? "not-allowed" : "pointer",
+            }}
+          >
+            {runningInactivityCheck ? "Running Check..." : "⏱️ Inactivity Check"}
+          </button>
+
           <Link href="/patients/new" style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "8px 14px", borderRadius: 9, background: "#0D9488",
-            color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 700
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "9px 16px",
+            borderRadius: 10,
+            background: "#0D9488",
+            color: "#fff",
+            textDecoration: "none",
+            fontSize: 13,
+            fontWeight: 700,
+            boxShadow: "0 2px 6px rgba(13,148,136,0.2)",
           }}>
             + Add Patient
-          </Link>
-          <Link href="/today" style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            padding: "8px 14px", borderRadius: 9, background: "#00C896",
-            color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 700
-          }}>
-            📅 Today&apos;s Schedule
           </Link>
         </div>
       </header>
 
-      <main style={{ maxWidth: 940, margin: "0 auto", padding: "32px 24px 64px" }}>
-        {/* Stats Row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, marginBottom: 24 }} className="fade-up">
-          <div style={{
-            background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14,
-            padding: "18px 22px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
-          }}>
-            <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              Registered Patients
-            </p>
-            <p style={{ margin: 0, fontSize: 28, fontWeight: 800, color: "#111827", letterSpacing: "-0.03em" }}>
-              {patients.length}
-            </p>
-          </div>
-
-          <div style={{
-            background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14,
-            padding: "18px 22px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
-          }}>
-            <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              Active Medications
-            </p>
-            <p style={{ margin: 0, fontSize: 28, fontWeight: 800, color: "#2563EB", letterSpacing: "-0.03em" }}>
-              {medications.length}
-            </p>
-          </div>
-        </div>
-
-        {/* 2-Way Tab Switcher */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          marginBottom: 20, gap: 16, flexWrap: "wrap"
-        }} className="fade-up">
-          <div style={{
-            display: "inline-flex", background: "#E5E7EB", padding: 3, borderRadius: 12
-          }}>
+      {/* Subnav & Filters */}
+      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "28px 24px" }}>
+        {/* Navigation Tabs */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 8, background: "#E2E8F0", padding: 4, borderRadius: 12 }}>
             <button
-              onClick={() => handleTabChange("patients")}
+              onClick={() => setTab("patients")}
               style={{
-                display: "flex", alignItems: "center", gap: 7,
-                padding: "8px 16px", borderRadius: 10, border: "none",
+                padding: "8px 18px",
+                borderRadius: 9,
+                border: "none",
                 background: tab === "patients" ? "#fff" : "transparent",
-                color: tab === "patients" ? "#111827" : "#6B7280",
-                fontSize: 13, fontWeight: 700, cursor: "pointer",
-                boxShadow: tab === "patients" ? "0 2px 6px rgba(0,0,0,0.08)" : "none",
-                transition: "all 0.15s"
+                color: tab === "patients" ? "#0F172A" : "#64748B",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: tab === "patients" ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
               }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
               Patients ({patients.length})
             </button>
-
             <button
-              onClick={() => handleTabChange("medications")}
+              onClick={() => setTab("medications")}
               style={{
-                display: "flex", alignItems: "center", gap: 7,
-                padding: "8px 16px", borderRadius: 10, border: "none",
+                padding: "8px 18px",
+                borderRadius: 9,
+                border: "none",
                 background: tab === "medications" ? "#fff" : "transparent",
-                color: tab === "medications" ? "#0D9488" : "#6B7280",
-                fontSize: 13, fontWeight: 700, cursor: "pointer",
-                boxShadow: tab === "medications" ? "0 2px 6px rgba(0,0,0,0.08)" : "none",
-                transition: "all 0.15s"
+                color: tab === "medications" ? "#0F172A" : "#64748B",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: tab === "medications" ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
               }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              All Medications ({medications.length})
+              Medications Hub ({medications.length})
             </button>
-          </div>
-
-          {/* Search Bar */}
-          <div style={{ position: "relative", flex: 1, minWidth: 260 }}>
-            <svg
-              style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }}
-              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={
-                tab === "patients"
-                  ? "Search patient name, condition..."
-                  : "Search medication name, dosage, or patient..."
-              }
-              style={{
-                width: "100%", padding: "9px 14px 9px 36px", borderRadius: 11,
-                border: "1.5px solid #E5E7EB", fontSize: 13, outline: "none",
-                background: "#fff", color: "#111827", transition: "border-color 0.15s"
-              }}
-              onFocus={e => (e.target.style.borderColor = "#0D9488")}
-              onBlur={e => (e.target.style.borderColor = "#E5E7EB")}
-            />
           </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="fade-up">
-          {loading ? (
-            <Skeleton />
-          ) : tab === "patients" ? (
-            patients.length === 0 ? (
-              <EmptyState tab="patients" />
+        {tab === "patients" && (
+          <>
+            {/* Filter Bar: Condition Chips + Severity + Search */}
+            <div style={{
+              background: "#fff",
+              border: "1px solid #E2E8F0",
+              borderRadius: 14,
+              padding: "16px 20px",
+              marginBottom: 24,
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                {/* Condition filter chips */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
+                    Condition:
+                  </span>
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "diabetes", label: "Diabetes" },
+                    { id: "hypertension", label: "Hypertension (BP)" },
+                    { id: "dementia", label: "Dementia" },
+                    { id: "depression", label: "Depression" },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setSelectedCondition(item.id)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        border: `1.5px solid ${selectedCondition === item.id ? "#0D9488" : "#E2E8F0"}`,
+                        background: selectedCondition === item.id ? "#CCFBF1" : "#F8FAFC",
+                        color: selectedCondition === item.id ? "#0F766E" : "#475569",
+                        fontSize: 12,
+                        fontWeight: selectedCondition === item.id ? 700 : 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Severity status filter */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
+                    Status:
+                  </span>
+                  {[
+                    { id: "all", label: "All Statuses", color: "#475569" },
+                    { id: "red", label: "Urgent (Red)", color: "#DC2626" },
+                    { id: "amber", label: "Warning (Amber)", color: "#D97706" },
+                    { id: "green", label: "Normal (Green)", color: "#16A34A" },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setSelectedSeverity(s.id)}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: `1.5px solid ${selectedSeverity === s.id ? s.color : "#E2E8F0"}`,
+                        background: selectedSeverity === s.id ? "#fff" : "#F8FAFC",
+                        color: selectedSeverity === s.id ? s.color : "#64748B",
+                        fontSize: 12,
+                        fontWeight: selectedSeverity === s.id ? 700 : 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Search input */}
+              <div style={{ position: "relative" }}>
+                <input
+                  type="text"
+                  placeholder="Search by patient name, phone number, or condition tag..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px 10px 36px",
+                    borderRadius: 10,
+                    border: "1.5px solid #E2E8F0",
+                    fontSize: 13,
+                    outline: "none",
+                    background: "#F8FAFC",
+                  }}
+                />
+                <span style={{ position: "absolute", left: 12, top: 11, color: "#94A3B8", fontSize: 14 }}>
+                  🔍
+                </span>
+              </div>
+            </div>
+
+            {/* Patient Cards / Rows */}
+            {loading ? (
+              <Skeleton />
             ) : filteredPatients.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px", color: "#9CA3AF", fontSize: 14 }}>
-                No patients match &quot;{search}&quot;
+              <div style={{
+                background: "#fff",
+                border: "1.5px dashed #CBD5E1",
+                borderRadius: 16,
+                padding: "64px 24px",
+                textAlign: "center",
+              }}>
+                <p style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700, color: "#0F172A" }}>
+                  No matching patients found
+                </p>
+                <p style={{ margin: "0 0 20px", fontSize: 13, color: "#64748B" }}>
+                  Try resetting filters or adding a new patient.
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedCondition("all");
+                    setSelectedSeverity("all");
+                    setSearch("");
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: 8,
+                    background: "#0D9488",
+                    color: "#fff",
+                    border: "none",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear Filters
+                </button>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {filteredPatients.map((p, i) => {
-                  const patientMeds = medications.filter(m => m.patientId === p.id);
+                {filteredPatients.map((p) => {
+                  const statusDotColor =
+                    p.status === "red" ? "#DC2626" : p.status === "amber" ? "#F59E0B" : "#16A34A";
+                  const statusBg =
+                    p.status === "red" ? "#FEF2F2" : p.status === "amber" ? "#FFFBEB" : "#F0FDF4";
 
                   return (
-                    <PatientCard
+                    <div
                       key={p.id}
-                      patient={p}
-                      meds={patientMeds}
-                      delay={i * 30}
-                      onDelete={handleDeletePatient}
-                      onSendSms={() => setSmsModalPatient(p)}
-                      onCall={() => setCallModalPatient(p)}
-                    />
+                      style={{
+                        background: "#fff",
+                        border: "1.5px solid #E2E8F0",
+                        borderRadius: 16,
+                        padding: "18px 22px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 20,
+                        transition: "all 0.15s ease",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                      }}
+                    >
+                      {/* Left: Patient Details */}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                          {/* Severity Indicator Dot */}
+                          <span
+                            title={`Status: ${p.status.toUpperCase()}`}
+                            style={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: "50%",
+                              background: statusDotColor,
+                              boxShadow: `0 0 0 3px ${statusBg}`,
+                            }}
+                          />
+                          <Link
+                            href={`/patients/${p.id}`}
+                            style={{
+                              fontSize: 16,
+                              fontWeight: 800,
+                              color: "#0F172A",
+                              textDecoration: "none",
+                            }}
+                          >
+                            {p.name}
+                          </Link>
+
+                          {/* Adherence / Last contact pill */}
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: 6,
+                            background: p.recheck_pending
+                              ? "#FFFBEB"
+                              : p.last_contact_status === "yes"
+                              ? "#F0FDF4"
+                              : "#F1F5F9",
+                            color: p.recheck_pending
+                              ? "#D97706"
+                              : p.last_contact_status === "yes"
+                              ? "#16A34A"
+                              : "#64748B",
+                          }}>
+                            {p.recheck_pending
+                              ? "Re-check Pending"
+                              : p.last_contact_status === "yes"
+                              ? "Adherent"
+                              : p.last_contact_status === "no"
+                              ? "Missed Dose"
+                              : "No Call Today"}
+                          </span>
+                        </div>
+
+                        {/* Condition chips */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                          {p.conditions && p.conditions.length > 0 ? (
+                            p.conditions.map((cond) => {
+                              const s = CONDITION_BADGE_STYLES[cond] || {
+                                bg: "#F1F5F9",
+                                color: "#475569",
+                                border: "#E2E8F0",
+                              };
+                              return (
+                                <span
+                                  key={cond}
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    background: s.bg,
+                                    color: s.color,
+                                    border: `1px solid ${s.border}`,
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                    textTransform: "capitalize",
+                                  }}
+                                >
+                                  {cond}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span style={{ fontSize: 11, color: "#94A3B8" }}>No active conditions assigned</span>
+                          )}
+                        </div>
+
+                        {/* Vitals Summary & Phone */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, color: "#64748B" }}>
+                          <span>📞 {p.phone}</span>
+                          <span>•</span>
+                          <span style={{ fontWeight: 600, color: "#334155" }}>
+                            {p.latest_vitals_summary}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Right: Alert status + Actions */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                        {p.open_alerts_count > 0 ? (
+                          <span style={{
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: p.urgent_alerts_count > 0 ? "#FEE2E2" : "#FEF3C7",
+                            color: p.urgent_alerts_count > 0 ? "#DC2626" : "#B45309",
+                          }}>
+                            {p.open_alerts_count} Open Alert{p.open_alerts_count > 1 ? "s" : ""}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 12, color: "#16A34A", fontWeight: 600 }}>
+                            ✓ All Normal
+                          </span>
+                        )}
+
+                        <Link
+                          href={`/patients/${p.id}`}
+                          style={{
+                            padding: "9px 16px",
+                            borderRadius: 10,
+                            background: "#0D9488",
+                            color: "#fff",
+                            textDecoration: "none",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          View Profile →
+                        </Link>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
-            )
-          ) : (
-            medications.length === 0 ? (
-              <EmptyState tab="medications" />
-            ) : filteredMedications.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px", color: "#9CA3AF", fontSize: 14 }}>
-                No medications match &quot;{search}&quot;
-              </div>
+            )}
+          </>
+        )}
+
+        {/* Medications tab view */}
+        {tab === "medications" && (
+          <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 16, padding: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0F172A" }}>
+                Active Medication Schedules
+              </h2>
+              <Link
+                href="/patients/add-medication"
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  background: "#0D9488",
+                  color: "#fff",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                }}
+              >
+                + Add Medication
+              </Link>
+            </div>
+
+            {medications.length === 0 ? (
+              <p style={{ color: "#94A3B8", textAlign: "center", padding: 32 }}>No medications added yet.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {filteredMedications.map((m, i) => {
-                  const pat = patients.find(p => p.id === m.patientId);
-                  return (
-                    <MedicationHubCard
-                      key={m.id}
-                      med={m}
-                      patient={pat}
-                      delay={i * 30}
-                      onDelete={() => handleDeleteMed(m.id, m.name)}
-                    />
-                  );
-                })}
-              </div>
-            )
-          )}
-        </div>
-      </main>
-
-      {/* Twilio SMS & Call Modals */}
-      <SendSmsModal
-        isOpen={!!smsModalPatient}
-        onClose={() => setSmsModalPatient(null)}
-        patient={smsModalPatient}
-        onSuccess={(msg) => setToast(msg)}
-      />
-      <CallCaregiverModal
-        isOpen={!!callModalPatient}
-        onClose={() => setCallModalPatient(null)}
-        patient={callModalPatient}
-        onSuccess={(msg) => setToast(msg)}
-      />
-    </div>
-  );
-}
-
-function PatientCard({
-  patient: p,
-  meds,
-  delay,
-  onDelete,
-  onSendSms,
-  onCall,
-}: {
-  patient: Patient;
-  meds: Medication[];
-  delay: number;
-  onDelete: (id: string, name: string) => void;
-  onSendSms: () => void;
-  onCall: () => void;
-}) {
-  const initials = p.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-  const primaryCaregiver = getPrimaryCaregiver(p);
-
-  return (
-    <div
-      className="patient-card"
-      style={{
-        background: "#fff", border: "1.5px solid #E5E7EB", borderRadius: 14,
-        padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)", transition: "all 0.18s",
-        animation: `fadeUp 0.3s ease-out ${delay}ms both`
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-        <Link href={`/patients/${p.id}`} style={{
-          width: 44, height: 44, borderRadius: 12, background: "#E0F2FE",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 14, fontWeight: 800, color: "#0284C7", flexShrink: 0, textDecoration: "none"
-        }}>
-          {initials}
-        </Link>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Link href={`/patients/${p.id}`} style={{ textDecoration: "none" }}>
-              <p style={{ margin: "0 0 2px", fontSize: 16, fontWeight: 800, color: "#111827" }}>
-                {p.name}
-              </p>
-            </Link>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <button
-                onClick={onSendSms}
-                style={{
-                  fontSize: 11, fontWeight: 700, color: "#065F46",
-                  padding: "4px 9px", borderRadius: 7, background: "#ECFDF5", border: "1px solid #A7F3D0", cursor: "pointer",
-                  display: "inline-flex", alignItems: "center", gap: 3
-                }}
-                title="Send SMS to caregiver via Twilio"
-              >
-                💬 SMS
-              </button>
-              <button
-                onClick={onCall}
-                style={{
-                  fontSize: 11, fontWeight: 700, color: "#1E3A8A",
-                  padding: "4px 9px", borderRadius: 7, background: "#EFF6FF", border: "1px solid #BFDBFE", cursor: "pointer",
-                  display: "inline-flex", alignItems: "center", gap: 3
-                }}
-                title="Call caregiver"
-              >
-                📞 Call
-              </button>
-              <Link
-                href={`/patients/add-medication?patientId=${p.id}`}
-                style={{
-                  fontSize: 11, fontWeight: 700, color: "#2563EB",
-                  padding: "4px 8px", borderRadius: 7, background: "#EFF6FF",
-                  textDecoration: "none"
-                }}
-              >
-                + Med
-              </Link>
-              <button
-                className="del-btn"
-                onClick={() => onDelete(p.id, p.name)}
-                title="Delete patient"
-                style={{
-                  width: 28, height: 28, borderRadius: 7, border: "1px solid #F3F4F6",
-                  background: "#fff", cursor: "pointer", display: "flex", alignItems: "center",
-                  justifyContent: "center", flexShrink: 0, transition: "all 0.15s"
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <p style={{ margin: 0, fontSize: 12, color: "#6B7280" }}>
-            {p.age ? `${p.age} yrs` : "Age unknown"}
-            {p.phone && ` • ${p.phone}`}
-          </p>
-
-          {/* Caregiver info + Last SMS Note */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-            {primaryCaregiver && (
-              <span style={{
-                fontSize: 11, fontWeight: 600, color: "#475569", background: "#F8FAFC",
-                padding: "2px 8px", borderRadius: 6, border: "1px solid #E2E8F0"
-              }}>
-                👤 Caregiver: <strong style={{ color: "#0F172A" }}>{primaryCaregiver.name}</strong> ({primaryCaregiver.relation} • {primaryCaregiver.phone})
-              </span>
-            )}
-            <LastSmsNote patientId={p.id} />
-          </div>
-
-          <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
-            {p.hasDiabetes && (
-              <span style={{
-                padding: "2px 8px", borderRadius: 5, background: "#EFF6FF",
-                fontSize: 11, fontWeight: 700, color: "#2563EB", border: "1px solid #DBEAFE"
-              }}>🩺 Diabetes</span>
-            )}
-            {p.hasHypertension && (
-              <span style={{
-                padding: "2px 8px", borderRadius: 5, background: "#FEF2F2",
-                fontSize: 11, fontWeight: 700, color: "#DC2626", border: "1px solid #FEE2E2"
-              }}>💓 Hypertension</span>
-            )}
-            {p.conditions.map(c => (
-              <span key={c} style={{
-                padding: "2px 8px", borderRadius: 5, background: "#F3F4F6",
-                fontSize: 11, fontWeight: 600, color: "#374151"
-              }}>{c}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Patient Summary Footer */}
-      <div style={{
-        paddingTop: 10, borderTop: "1px solid #F3F4F6",
-        display: "flex", alignItems: "center", justifyContent: "space-between"
-      }}>
-        <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 600 }}>
-          💊 {meds.length} Active Medication{meds.length !== 1 ? "s" : ""}
-        </span>
-
-        <Link href={`/patients/${p.id}`} style={{
-          fontSize: 12, fontWeight: 700, color: "#0D9488", textDecoration: "none"
-        }}>
-          View Details →
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function MedicationHubCard({
-  med: m,
-  patient,
-  delay,
-  onDelete
-}: {
-  med: Medication;
-  patient?: Patient;
-  delay: number;
-  onDelete: () => void;
-}) {
-  return (
-    <div
-      className="med-card"
-      style={{
-        background: "#fff", border: "1.5px solid #E5E7EB", borderRadius: 14,
-        padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 16,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)", borderLeft: "4px solid #0D9488",
-        transition: "all 0.18s", animation: `fadeUp 0.3s ease-out ${delay}ms both`
-      }}
-    >
-      <div style={{
-        width: 40, height: 40, borderRadius: 10, background: "#CCFBF1",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
-      }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{m.name}</span>
-              {(m.dosage || m.unit) && (
-                <span style={{
-                  padding: "2px 8px", borderRadius: 5, background: "#F0FDF4",
-                  color: "#16A34A", fontSize: 12, fontWeight: 700
-                }}>
-                  {m.dosage} {m.unit}
-                </span>
-              )}
-              <span style={{
-                padding: "2px 8px", borderRadius: 5, background: "#EFF6FF",
-                color: "#2563EB", fontSize: 12, fontWeight: 600
-              }}>
-                {m.schedule}
-              </span>
-            </div>
-
-            {/* Linked Patient */}
-            {patient && (
-              <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 11, color: "#9CA3AF" }}>Prescribed for:</span>
-                <Link
-                  href={`/patients/${patient.id}`}
-                  style={{
-                    fontSize: 12, fontWeight: 700, color: "#0D9488",
-                    textDecoration: "none", background: "#F0FDFA", padding: "1px 7px", borderRadius: 4
-                  }}
-                >
-                  👤 {patient.name} {patient.age ? `(${patient.age} yrs)` : ""}
-                </Link>
+                {medications.map((m) => (
+                  <div
+                    key={m.id}
+                    style={{
+                      border: "1px solid #E2E8F0",
+                      borderRadius: 10,
+                      padding: "12px 16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>{m.name}</span>
+                      <span style={{ fontSize: 12, color: "#64748B", marginLeft: 8 }}>
+                        {m.dosage} {m.unit} · {m.schedule}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteMed(m.id, m.name)}
+                      style={{
+                        background: "#FEF2F2",
+                        border: "1px solid #FECDD3",
+                        color: "#DC2626",
+                        borderRadius: 6,
+                        padding: "4px 8px",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-
-          <button
-            onClick={onDelete}
-            title="Delete medication"
-            style={{
-              width: 28, height: 28, borderRadius: 7, border: "1px solid #FEE2E2",
-              background: "#FFF5F5", cursor: "pointer", display: "flex", alignItems: "center",
-              justifyContent: "center", flexShrink: 0, marginLeft: 8, transition: "all 0.15s"
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-          </button>
-        </div>
-
-        {m.notes && (
-          <p style={{ margin: "8px 0 0", fontSize: 12, color: "#6B7280", lineHeight: 1.5 }}>
-            {m.notes}
-          </p>
         )}
       </div>
+
+      {/* Global Alerts Modal */}
+      <GlobalAlertsModal
+        isOpen={showAlertsModal}
+        onClose={() => setShowAlertsModal(false)}
+        onAlertChanged={fetchPatients}
+      />
     </div>
   );
 }
 
 export default function PatientsPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#F9FAFB" }} />}>
+    <Suspense fallback={<div style={{ padding: 40, textAlign: "center" }}>Loading Care Dashboard...</div>}>
       <PatientsContent />
     </Suspense>
   );
